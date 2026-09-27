@@ -18,6 +18,9 @@ main, en local.
   est refusé. Les lots font 50 écritures au maximum.
 - Passer par `prepare-db.mjs` pour écrire des offres : il produit un fichier par
   document, ce qui évite de recopier des centaines de champs dans un appel.
+- N'écrire en base que des URLs `http(s)`. Le dashboard valide déjà le schéma
+  avant de produire un `href` (un `javascript:` échappé resterait exécutable),
+  mais une URL douteuse n'a rien à faire en base pour autant.
 - Commentaires et messages de commit en anglais ; interface, contenu et échanges
   avec l'utilisateur en français.
 - `db-writes/`, `cv/` et `.veille-tmp/` sont des dossiers de travail, ignorés par

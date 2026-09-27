@@ -338,6 +338,20 @@
   const esc = (s) =>
     String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+  // Les documents de la base sont de la donnée partagée, pas du contenu de
+  // confiance : échapper ne suffit pas pour un href, il faut valider le schéma
+  // (un `javascript:` échappé reste un href exécutable). Rend null si l'URL
+  // n'est pas http(s) — l'appelant affiche alors du texte, pas un lien.
+  function safeUrl(value) {
+    if (!value) return null;
+    try {
+      const u = new URL(String(value), location.href);
+      return u.protocol === "http:" || u.protocol === "https:" ? u.href : null;
+    } catch {
+      return null;
+    }
+  }
+
   function ago(iso) {
     if (!iso) return "";
     const ms = Date.now() - new Date(iso).getTime();
@@ -531,12 +545,13 @@
     meta.push(`<span class="src">${esc(SOURCES[o.source] || o.source)}</span>`);
     if (o.alsoOn?.length) meta.push(`<span class="also">aussi sur ${esc(o.alsoOn.map((s) => SOURCES[s] || s).join(", "))}</span>`);
 
+    const href = safeUrl(o.url);
     return `<article class="${cls}">
       <button class="ref" data-copy="${esc(o.ref || o.id)}" title="Copier la référence">${esc(o.ref || "—")}</button>
       <div class="head">
-        <p class="title"><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.title)}</a>${
-          o.company ? ` <span class="co">· ${esc(o.company)}</span>` : ""
-        }</p>
+        <p class="title">${
+          href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(o.title)}</a>` : esc(o.title)
+        }${o.company ? ` <span class="co">· ${esc(o.company)}</span>` : ""}</p>
         <div class="meta">${meta.join('<span class="sep">·</span>')}</div>
       </div>
       <div class="acts">
@@ -559,18 +574,19 @@
       return;
     }
     box.innerHTML = `<div class="cards">${events
-      .map(
-        (e) => `<div class="card ev">
+      .map((e) => {
+        const href = safeUrl(e.url);
+        return `<div class="card ev">
           <div class="when">${esc(dayMonth(e.date))}</div>
           <div>
-            <h3>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}</h3>
+            <h3>${href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(e.title)}</a>` : esc(e.title)}</h3>
             <div class="meta">${[e.type && esc(e.type), e.location && esc(e.location), e.source && `<span class="src">${esc(e.source)}</span>`]
               .filter(Boolean)
               .join('<span class="sep">·</span>')}</div>
             ${e.note ? `<p class="why" style="grid-column:auto">${esc(e.note)}</p>` : ""}
           </div>
-        </div>`
-      )
+        </div>`;
+      })
       .join("")}</div>`;
   }
 

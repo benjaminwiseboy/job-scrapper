@@ -1,0 +1,847 @@
+<title>Veille Emploi</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #f4f6f5;
+    --surface: #ffffff;
+    --surface-2: #eceff0;
+    --ink: #14211e;
+    --muted: #5c6b66;
+    --faint: #8a9994;
+    --line: #dce2df;
+    --line-strong: #c3ccc8;
+    --accent: #1a5e52;
+    --accent-soft: #e3efeb;
+    --on-accent: #ffffff;
+    --cible: #17564a;
+    --cible-bg: #e0efe9;
+    --possible: #8a5a12;
+    --possible-bg: #f7ecd9;
+    --hors: #66716d;
+    --hors-bg: #e8ebea;
+    --danger: #a33a2a;
+    --shadow: 0 1px 2px rgba(20, 33, 30, .05), 0 6px 18px -12px rgba(20, 33, 30, .18);
+    --radius: 10px;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+    --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display: "Bricolage Grotesque", var(--sans);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0f1513;
+      --surface: #17201d;
+      --surface-2: #1e2825;
+      --ink: #e8edea;
+      --muted: #97a6a0;
+      --faint: #74827d;
+      --line: #2a3531;
+      --line-strong: #3a4742;
+      --accent: #5fbfa8;
+      --accent-soft: #1b2b27;
+      --on-accent: #0f1513;
+      --cible: #6fc9b1;
+      --cible-bg: #17302b;
+      --possible: #d9a758;
+      --possible-bg: #2e2619;
+      --hors: #8b9793;
+      --hors-bg: #212a27;
+      --danger: #e0715c;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -14px rgba(0, 0, 0, .7);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #0f1513;
+    --surface: #17201d;
+    --surface-2: #1e2825;
+    --ink: #e8edea;
+    --muted: #97a6a0;
+    --faint: #74827d;
+    --line: #2a3531;
+    --line-strong: #3a4742;
+    --accent: #5fbfa8;
+    --accent-soft: #1b2b27;
+    --on-accent: #0f1513;
+    --cible: #6fc9b1;
+    --cible-bg: #17302b;
+    --possible: #d9a758;
+    --possible-bg: #2e2619;
+    --hors: #8b9793;
+    --hors-bg: #212a27;
+    --danger: #e0715c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -14px rgba(0, 0, 0, .7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 15px/1.55 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 1060px; margin: 0 auto; padding: 0 16px; padding-block: 28px 64px; }
+
+  /* ---------------------------------------------------------- en-tête */
+  header { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-end; justify-content: space-between; }
+  h1 {
+    font: 700 clamp(26px, 4.4vw, 34px)/1.05 var(--display);
+    letter-spacing: -.02em; margin: 0; text-wrap: balance;
+  }
+  .sub { margin: 5px 0 0; color: var(--muted); font-size: 13.5px; }
+  .sub b { color: var(--ink); font-weight: 600; }
+
+  .searches { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: 500 12.5px/1 var(--sans); letter-spacing: .01em;
+    padding: 8px 12px; border-radius: 999px; cursor: pointer;
+    background: var(--surface); color: var(--muted);
+    border: 1px solid var(--line); transition: .14s;
+  }
+  .chip:hover { border-color: var(--line-strong); color: var(--ink); }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .chip .n { font-family: var(--mono); font-size: 11px; opacity: .72; margin-left: 5px; }
+
+  /* ----------------------------------------------------------- onglets */
+  .tabs { display: flex; gap: 2px; margin: 26px 0 0; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .tab {
+    appearance: none; background: none; border: 0; cursor: pointer;
+    font: 600 14px/1 var(--sans); color: var(--muted);
+    padding: 12px 14px; border-bottom: 2px solid transparent;
+    white-space: nowrap; transition: .14s;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab .badge {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+    background: var(--accent-soft); color: var(--accent);
+    padding: 2px 5px; border-radius: 4px; margin-left: 6px;
+  }
+
+  section[role="tabpanel"] { padding-top: 24px; }
+
+  /* -------------------------------------------------------------- kpis */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+  .kpi { background: var(--surface); padding: 14px 16px; }
+  .kpi dt { font-size: 11.5px; font-weight: 500; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; margin: 0; }
+  .kpi dd { margin: 4px 0 0; font: 600 25px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .kpi dd small { font-size: 12px; font-weight: 500; color: var(--faint); letter-spacing: 0; }
+
+  /* ----------------------------------------------------------- filtres */
+  .filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 20px 0 4px; }
+  .filters .lbl { font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); font-weight: 600; margin-right: 2px; }
+  .chip.sm { padding: 6px 10px; font-size: 12px; }
+
+  /* ------------------------------------------------------------ offres */
+  .tier { margin-top: 26px; }
+  .tier > summary {
+    display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none;
+    padding-bottom: 9px; border-bottom: 1px solid var(--line);
+  }
+  .tier > summary::-webkit-details-marker { display: none; }
+  .tier > summary::before {
+    content: ""; width: 0; height: 0; border-left: 5px solid currentColor;
+    border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+    color: var(--faint); transition: transform .15s; flex: none;
+  }
+  .tier[open] > summary::before { transform: rotate(90deg); }
+  .tier h2 { font: 700 15px/1 var(--display); margin: 0; letter-spacing: -.01em; }
+  .tier .count { font: 500 12px/1 var(--mono); color: var(--faint); }
+  .tier .hint { font-size: 12.5px; color: var(--faint); margin-left: auto; }
+  .tier[data-tier="cible"] h2 { color: var(--cible); }
+  .tier[data-tier="possible"] h2 { color: var(--possible); }
+  .tier[data-tier="hors"] h2 { color: var(--hors); }
+
+  .row {
+    display: grid; grid-template-columns: 76px 1fr auto; gap: 4px 14px;
+    padding: 14px 2px; border-bottom: 1px solid var(--line); align-items: start;
+  }
+  .row:last-child { border-bottom: 0; }
+  .row.is-applied { background: linear-gradient(90deg, var(--accent-soft), transparent 42%); }
+  .row.is-rejected { opacity: .48; }
+
+  .ref {
+    grid-row: span 2; font: 600 11.5px/1.3 var(--mono); letter-spacing: -.02em;
+    color: var(--muted); background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 0; text-align: center; cursor: pointer;
+    transition: .14s; user-select: all;
+  }
+  .ref:hover { color: var(--accent); border-color: var(--accent); }
+  .ref.copied { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+  .row .head { min-width: 0; }
+  .row .title { font: 600 15px/1.35 var(--sans); letter-spacing: -.005em; margin: 0; }
+  .row .title a { color: var(--ink); text-decoration: none; }
+  .row .title a:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .row .co { color: var(--muted); font-weight: 500; }
+  .meta { display: flex; flex-wrap: wrap; gap: 3px 9px; margin-top: 4px; font-size: 12.5px; color: var(--muted); align-items: baseline; }
+  .meta .sep { color: var(--line-strong); }
+  .meta time, .meta .sal { font-family: var(--mono); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .meta .approx::after { content: "~"; color: var(--faint); font-size: 10px; vertical-align: super; }
+  .src { font: 500 10.5px/1 var(--mono); letter-spacing: .02em; text-transform: uppercase; padding: 3px 5px; border-radius: 4px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+  .also { font-size: 11px; color: var(--faint); }
+  .why { grid-column: 2; font-size: 13px; color: var(--muted); margin: 5px 0 0; padding-left: 9px; border-left: 2px solid var(--line-strong); }
+
+  .acts { display: flex; gap: 5px; grid-row: span 2; }
+  .act {
+    appearance: none; cursor: pointer; font: 500 11.5px/1 var(--sans);
+    padding: 6px 9px; border-radius: 6px; white-space: nowrap;
+    background: var(--surface); border: 1px solid var(--line); color: var(--muted); transition: .14s;
+  }
+  .act:hover { border-color: var(--line-strong); color: var(--ink); }
+  .act.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .act.no:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ------------------------------------------------- événements, profil */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
+  .cards { display: grid; gap: 12px; }
+  .ev { display: grid; grid-template-columns: 62px 1fr auto; gap: 4px 16px; align-items: start; }
+  .ev .when { font: 600 12px/1.35 var(--mono); color: var(--accent); text-align: center; background: var(--accent-soft); border-radius: 6px; padding: 6px 0; }
+  .ev h3 { font: 600 15px/1.3 var(--sans); margin: 0; }
+  .ev h3 a { color: var(--ink); text-decoration: none; }
+  .ev h3 a:hover { color: var(--accent); text-decoration: underline; }
+
+  .sect { margin-top: 30px; }
+  .sect > h2 { font: 700 17px/1.2 var(--display); margin: 0 0 12px; letter-spacing: -.015em; }
+  .sect > h2 .of { font: 500 12px/1 var(--mono); color: var(--faint); margin-left: 8px; }
+
+  .xp { border-left: 2px solid var(--line-strong); padding: 0 0 0 16px; margin-bottom: 22px; }
+  .xp > h3 { font: 600 15.5px/1.3 var(--sans); margin: 0; }
+  .xp .org { color: var(--muted); font-size: 13.5px; margin: 2px 0 0; }
+  .xp .org .dates { font-family: var(--mono); font-size: 12px; }
+  .star { display: grid; gap: 10px; margin-top: 12px; }
+  .star > div { display: grid; grid-template-columns: 74px 1fr; gap: 12px; align-items: baseline; }
+  .star dt { font: 600 10.5px/1.5 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); margin: 0; }
+  .star dd { margin: 0; font-size: 14px; }
+  /* Les noms de commandes sont des chaînes littérales : ni capitalisées, ni coupées. */
+  .cmdlist { display: grid; gap: 11px; }
+  .cmdlist > div { display: grid; grid-template-columns: 152px 1fr; gap: 14px; align-items: baseline; }
+  .cmdlist dt { font: 500 12.5px/1.5 var(--mono); color: var(--accent); margin: 0; white-space: nowrap; }
+  .cmdlist dd { margin: 0; font-size: 14px; }
+  @media (max-width: 620px) { .cmdlist > div { grid-template-columns: 1fr; gap: 2px; } }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .pill { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
+
+  /* -------------------------------------------------------- paramètres */
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; font: 600 11px/1 var(--sans); text-transform: uppercase; letter-spacing: .05em; color: var(--faint); padding: 0 10px 9px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 11px 10px 11px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12.5px; }
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
+  .dot.ok { background: var(--cible); }
+  .dot.warn { background: var(--possible); }
+  .dot.off { background: var(--line-strong); }
+  .tbl-wrap { overflow-x: auto; }
+
+  code.cmd { font: 500 12.5px/1.5 var(--mono); background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; color: var(--ink); white-space: nowrap; }
+
+  /* -------------------------------------------------------- états vides */
+  .empty { text-align: center; padding: 52px 20px; color: var(--muted); }
+  .empty h2 { font: 700 18px/1.25 var(--display); color: var(--ink); margin: 0 0 8px; }
+  .empty p { margin: 0 auto; max-width: 46ch; font-size: 14px; }
+  .empty .cmds { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  @media (max-width: 620px) {
+    .row { grid-template-columns: 62px 1fr; }
+    .acts { grid-row: auto; grid-column: 2; margin-top: 7px; }
+    .why { grid-column: 1 / -1; }
+    .ev { grid-template-columns: 54px 1fr; }
+    .star > div { grid-template-columns: 1fr; gap: 2px; }
+  }
+</style>
+
+<div class="shell">
+  <header>
+    <div>
+      <h1>Veille Emploi</h1>
+      <p class="sub" id="sub">Connexion à la base…</p>
+    </div>
+    <div class="searches" id="searchChips"></div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" id="t-offres" aria-controls="p-offres" aria-selected="true">Offres<span class="badge" id="b-offres">0</span></button>
+    <button class="tab" role="tab" id="t-events" aria-controls="p-events" aria-selected="false">Événements<span class="badge" id="b-events">0</span></button>
+    <button class="tab" role="tab" id="t-profil" aria-controls="p-profil" aria-selected="false">Profil</button>
+    <button class="tab" role="tab" id="t-params" aria-controls="p-params" aria-selected="false">Paramètres</button>
+  </nav>
+
+  <section role="tabpanel" id="p-offres" aria-labelledby="t-offres">
+    <dl class="kpis" id="kpis"></dl>
+    <div class="filters" id="filters"></div>
+    <div id="offersList"></div>
+  </section>
+
+  <section role="tabpanel" id="p-events" aria-labelledby="t-events" hidden>
+    <div id="eventsList"></div>
+  </section>
+
+  <section role="tabpanel" id="p-profil" aria-labelledby="t-profil" hidden>
+    <div id="profilBody"></div>
+  </section>
+
+  <section role="tabpanel" id="p-params" aria-labelledby="t-params" hidden>
+    <div id="paramsBody"></div>
+  </section>
+</div>
+
+<script>
+  "use strict";
+
+  const SOURCES = {
+    linkedin: "LinkedIn",
+    indeed: "Indeed",
+    meteojob: "Météojob",
+    apec: "APEC",
+    francetravail: "France Travail",
+  };
+
+  const TIERS = [
+    { key: "cible", label: "Cible", hint: "à postuler en priorité" },
+    { key: "possible", label: "Possible", hint: "correspondance partielle" },
+    { key: null, label: "Non classées", hint: "pas encore évaluées" },
+    { key: "hors", label: "Hors cible", hint: "écartées au classement" },
+  ];
+
+  const state = {
+    db: null,
+    ready: false,
+    offline: false,
+    searches: [],
+    offers: [],
+    events: [],
+    cvs: [],
+    profile: {},
+    activeSearch: read("veille.search", "all"),
+    filterSource: read("veille.source", "all"),
+    filterStatus: read("veille.status", "open"),
+    tab: read("veille.tab", "offres"),
+  };
+
+  /* --------------------------------------------------------- utilitaires */
+
+  function read(key, fallback) {
+    try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+  }
+  function write(key, value) {
+    try { localStorage.setItem(key, value); } catch {}
+  }
+
+  const esc = (s) =>
+    String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function ago(iso) {
+    if (!iso) return "";
+    const ms = Date.now() - new Date(iso).getTime();
+    if (!isFinite(ms)) return "";
+    const d = Math.floor(ms / 86400000);
+    if (d <= 0) return "aujourd'hui";
+    if (d === 1) return "hier";
+    if (d < 7) return `il y a ${d} j`;
+    if (d < 14) return "il y a 1 sem.";
+    if (d < 62) return `il y a ${Math.floor(d / 7)} sem.`;
+    return `il y a ${Math.floor(d / 30)} mois`;
+  }
+
+  function dayMonth(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (isNaN(d)) return "—";
+    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" }).replace(".", "");
+  }
+
+  /* ------------------------------------------------------------ sélection */
+
+  function currentSearch() {
+    return state.searches.find((s) => s.id === state.activeSearch) || null;
+  }
+
+  function inScope(o) {
+    return state.activeSearch === "all" || o.searchId === state.activeSearch;
+  }
+
+  function visibleOffers() {
+    return state.offers.filter((o) => {
+      if (!inScope(o)) return false;
+      if (state.filterSource !== "all" && o.source !== state.filterSource) return false;
+      if (state.filterStatus === "open" && o.status === "rejected") return false;
+      if (state.filterStatus === "applied" && o.status !== "applied") return false;
+      if (state.filterStatus === "new" && o.status !== "new") return false;
+      return true;
+    });
+  }
+
+  /* --------------------------------------------------------------- rendu */
+
+  function render() {
+    renderHeader();
+    renderTabs();
+    renderKpis();
+    renderFilters();
+    renderOffers();
+    renderEvents();
+    renderProfil();
+    renderParams();
+  }
+
+  function renderHeader() {
+    const sub = document.getElementById("sub");
+    if (state.offline) {
+      sub.innerHTML = "Base indisponible dans cette vue — les données ne peuvent pas être chargées.";
+    } else if (!state.ready) {
+      sub.textContent = "Connexion à la base…";
+    } else {
+      const last = state.searches
+        .flatMap((s) => Object.values(s.sources || {}).map((x) => x.lastScrapeAt))
+        .filter(Boolean)
+        .sort()
+        .pop();
+      const n = state.offers.filter(inScope).length;
+      sub.innerHTML = last
+        ? `<b>${n}</b> offre${n > 1 ? "s" : ""} en base · dernier scraping <b>${esc(ago(last))}</b>`
+        : `<b>${n}</b> offre${n > 1 ? "s" : ""} en base`;
+    }
+
+    const box = document.getElementById("searchChips");
+    if (!state.searches.length) { box.innerHTML = ""; return; }
+    const counts = {};
+    for (const o of state.offers) counts[o.searchId] = (counts[o.searchId] || 0) + 1;
+    const chips = [{ id: "all", label: "Toutes", n: state.offers.length }].concat(
+      state.searches.map((s) => ({ id: s.id, label: s.label || s.id, n: counts[s.id] || 0 }))
+    );
+    box.innerHTML = chips
+      .map(
+        (c) =>
+          `<button class="chip" data-search="${esc(c.id)}" aria-pressed="${c.id === state.activeSearch}">${esc(c.label)}<span class="n">${c.n}</span></button>`
+      )
+      .join("");
+  }
+
+  function renderTabs() {
+    for (const btn of document.querySelectorAll(".tab")) {
+      const key = btn.id.slice(2);
+      const on = key === state.tab;
+      btn.setAttribute("aria-selected", String(on));
+      document.getElementById("p-" + key).hidden = !on;
+    }
+    const scoped = state.offers.filter(inScope);
+    document.getElementById("b-offres").textContent = scoped.filter((o) => o.status === "new").length;
+    document.getElementById("b-events").textContent = state.events.filter(inScope).length;
+  }
+
+  function renderKpis() {
+    const scoped = state.offers.filter(inScope);
+    const cvs = state.cvs.filter(inScope);
+    const applied = scoped.filter((o) => o.status === "applied").length;
+    const cibles = scoped.filter((o) => o.tier === "cible" && o.status !== "rejected").length;
+    const answered = scoped.filter((o) => o.status === "answered").length;
+    // Quatre tuiles, pas cinq : à deux colonnes une cinquième laisserait une
+    // case vide dans la grille. Le taux de réponse se lit sous les candidatures.
+    const items = [
+      ["Nouvelles", scoped.filter((o) => o.status === "new").length, ""],
+      ["Cibles ouvertes", cibles, ""],
+      ["Candidatures", applied, applied ? `${answered} réponse${answered > 1 ? "s" : ""}` : ""],
+      ["CV générés", cvs.length, ""],
+    ];
+    document.getElementById("kpis").innerHTML = items
+      .map(
+        ([k, v, note]) =>
+          `<div class="kpi"><dt>${esc(k)}</dt><dd>${esc(v)}${note ? ` <small>${esc(note)}</small>` : ""}</dd></div>`
+      )
+      .join("");
+  }
+
+  function renderFilters() {
+    const scoped = state.offers.filter(inScope);
+    if (!scoped.length) { document.getElementById("filters").innerHTML = ""; return; }
+    const bySource = {};
+    for (const o of scoped) bySource[o.source] = (bySource[o.source] || 0) + 1;
+
+    const src = [`<span class="lbl">Source</span>`, chipHtml("source", "all", "Toutes", scoped.length, state.filterSource)];
+    for (const [k, n] of Object.entries(bySource).sort((a, b) => b[1] - a[1])) {
+      src.push(chipHtml("source", k, SOURCES[k] || k, n, state.filterSource));
+    }
+    const st = [
+      `<span class="lbl" style="margin-left:10px">Statut</span>`,
+      chipHtml("status", "open", "En cours", null, state.filterStatus),
+      chipHtml("status", "new", "Nouvelles", null, state.filterStatus),
+      chipHtml("status", "applied", "Postulées", null, state.filterStatus),
+      chipHtml("status", "all", "Tout", null, state.filterStatus),
+    ];
+    document.getElementById("filters").innerHTML = src.concat(st).join("");
+  }
+
+  function chipHtml(kind, value, label, n, active) {
+    return `<button class="chip sm" data-${kind}="${esc(value)}" aria-pressed="${value === active}">${esc(label)}${
+      n != null ? `<span class="n">${n}</span>` : ""
+    }</button>`;
+  }
+
+  function renderOffers() {
+    const box = document.getElementById("offersList");
+    if (state.offline) {
+      box.innerHTML = emptyHtml("Base inaccessible", "Cette vue ne peut pas lire la base de l'artefact. Ouvre le dashboard depuis ton compte pour voir tes offres.");
+      return;
+    }
+    if (!state.ready) { box.innerHTML = ""; return; }
+
+    const offers = visibleOffers();
+    if (!offers.length) {
+      box.innerHTML = state.offers.length
+        ? emptyHtml("Aucune offre pour ce filtre", "Élargis la source ou le statut pour revoir les offres masquées.")
+        : emptyHtml(
+            "Pas encore d'offres",
+            "Lance un scraping depuis Claude Code pour remplir ce tableau. Les offres arrivent classées, avec une référence courte pour générer un CV adapté.",
+            ["/veille-scrape", "/veille-profil"]
+          );
+      return;
+    }
+
+    box.innerHTML = TIERS.map((t) => {
+      const list = offers.filter((o) => (o.tier || null) === t.key);
+      if (!list.length) return "";
+      const open = t.key !== "hors";
+      return `<details class="tier" data-tier="${t.key || "none"}"${open ? " open" : ""}>
+        <summary><h2>${esc(t.label)}</h2><span class="count">${list.length}</span><span class="hint">${esc(t.hint)}</span></summary>
+        ${list.map(rowHtml).join("")}
+      </details>`;
+    }).join("");
+  }
+
+  function rowHtml(o) {
+    const cls = ["row", o.status === "applied" ? "is-applied" : "", o.status === "rejected" ? "is-rejected" : ""]
+      .filter(Boolean)
+      .join(" ");
+    const meta = [];
+    if (o.location) meta.push(esc(o.location));
+    if (o.contract) meta.push(esc(o.contract));
+    if (o.salary) meta.push(`<span class="sal">${esc(o.salary)}</span>`);
+    const when = o.postedAt
+      ? `<time datetime="${esc(o.postedAt)}"${o.dateConfidence === "approx" ? ' class="approx"' : ""}>${esc(ago(o.postedAt))}</time>`
+      : `<span style="color:var(--faint)">date inconnue</span>`;
+    meta.push(when);
+    meta.push(`<span class="src">${esc(SOURCES[o.source] || o.source)}</span>`);
+    if (o.alsoOn?.length) meta.push(`<span class="also">aussi sur ${esc(o.alsoOn.map((s) => SOURCES[s] || s).join(", "))}</span>`);
+
+    return `<article class="${cls}">
+      <button class="ref" data-copy="${esc(o.ref || o.id)}" title="Copier la référence">${esc(o.ref || "—")}</button>
+      <div class="head">
+        <p class="title"><a href="${esc(o.url)}" target="_blank" rel="noopener">${esc(o.title)}</a>${
+          o.company ? ` <span class="co">· ${esc(o.company)}</span>` : ""
+        }</p>
+        <div class="meta">${meta.join('<span class="sep">·</span>')}</div>
+      </div>
+      <div class="acts">
+        <button class="act ${o.status === "applied" ? "on" : ""}" data-status="applied" data-id="${esc(o.id)}">Postulé</button>
+        <button class="act no ${o.status === "rejected" ? "on" : ""}" data-status="rejected" data-id="${esc(o.id)}">Écarter</button>
+      </div>
+      ${o.rationale ? `<p class="why">${esc(o.rationale)}</p>` : ""}
+    </article>`;
+  }
+
+  function renderEvents() {
+    const box = document.getElementById("eventsList");
+    const events = state.events.filter(inScope).sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+    if (!events.length) {
+      box.innerHTML = emptyHtml(
+        "Aucun événement repéré",
+        "Salons, job datings et forums de recrutement correspondant à ta recherche. Ils sont trouvés par recherche web, ou scrapés depuis une source que tu ajoutes.",
+        ["/veille-events", "/veille-source <url>"]
+      );
+      return;
+    }
+    box.innerHTML = `<div class="cards">${events
+      .map(
+        (e) => `<div class="card ev">
+          <div class="when">${esc(dayMonth(e.date))}</div>
+          <div>
+            <h3>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.title)}</a>` : esc(e.title)}</h3>
+            <div class="meta">${[e.type && esc(e.type), e.location && esc(e.location), e.source && `<span class="src">${esc(e.source)}</span>`]
+              .filter(Boolean)
+              .join('<span class="sep">·</span>')}</div>
+            ${e.note ? `<p class="why" style="grid-column:auto">${esc(e.note)}</p>` : ""}
+          </div>
+        </div>`
+      )
+      .join("")}</div>`;
+  }
+
+  function renderProfil() {
+    const box = document.getElementById("profilBody");
+    const p = state.profile;
+    if (!p.identity && !p.experiences && !p.formation) {
+      box.innerHTML = emptyHtml(
+        "Profil vide",
+        "Le profil alimente le classement des offres et la rédaction des CV adaptés. Il se remplit par un entretien guidé : formation, puis chaque expérience au format STAR (situation, tâche, action, résultat).",
+        ["/veille-profil"]
+      );
+      return;
+    }
+
+    const parts = [];
+    const id = p.identity || {};
+    if (id.name || id.headline) {
+      parts.push(`<div class="card">
+        <h2 style="font:700 20px/1.2 var(--display);margin:0 0 3px">${esc(id.name || "")}</h2>
+        ${id.headline ? `<p style="margin:0;color:var(--muted)">${esc(id.headline)}</p>` : ""}
+        <div class="pills">${[id.location, id.mobility, id.email, id.phone, ...(id.languages || [])]
+          .filter(Boolean)
+          .map((x) => `<span class="pill">${esc(x)}</span>`)
+          .join("")}</div>
+      </div>`);
+    }
+
+    const xps = p.experiences?.items || [];
+    if (xps.length) {
+      parts.push(`<div class="sect"><h2>Expériences<span class="of">${xps.length}</span></h2>${xps
+        .map(
+          (x) => `<div class="xp">
+            <h3>${esc(x.role || "")}</h3>
+            <p class="org">${esc(x.company || "")}${x.sector ? ` · ${esc(x.sector)}` : ""}${
+            x.size ? ` · ${esc(x.size)}` : ""
+          }${x.dates ? ` <span class="dates">${esc(x.dates)}</span>` : ""}</p>
+            <dl class="star">
+              ${starRow("Situation", x.situation)}
+              ${starRow("Tâche", x.task)}
+              ${starRow("Action", x.action)}
+              ${starRow("Résultat", x.result)}
+            </dl>
+            ${
+              x.skills?.length
+                ? `<div class="pills">${x.skills.map((s) => `<span class="pill">${esc(s)}</span>`).join("")}</div>`
+                : ""
+            }
+          </div>`
+        )
+        .join("")}</div>`);
+    }
+
+    const fms = p.formation?.items || [];
+    if (fms.length) {
+      parts.push(`<div class="sect"><h2>Formation<span class="of">${fms.length}</span></h2>${fms
+        .map(
+          (f) => `<div class="xp">
+            <h3>${esc(f.degree || "")}</h3>
+            <p class="org">${esc(f.school || "")}${f.dates ? ` <span class="dates">${esc(f.dates)}</span>` : ""}</p>
+            ${f.focus ? `<p style="margin:7px 0 0;font-size:14px">${esc(f.focus)}</p>` : ""}
+            ${
+              f.highlights?.length
+                ? `<ul style="margin:7px 0 0;padding-left:18px;font-size:14px;color:var(--muted)">${f.highlights
+                    .map((h) => `<li>${esc(h)}</li>`)
+                    .join("")}</ul>`
+                : ""
+            }
+          </div>`
+        )
+        .join("")}</div>`);
+    }
+
+    const sk = p.skills || {};
+    const groups = Object.entries(sk).filter(([, v]) => Array.isArray(v) && v.length);
+    if (groups.length) {
+      parts.push(`<div class="sect"><h2>Compétences</h2><div class="cards">${groups
+        .map(
+          ([k, v]) =>
+            `<div class="card"><dt style="font:600 11px/1 var(--mono);letter-spacing:.05em;text-transform:uppercase;color:var(--accent);margin-bottom:9px">${esc(
+              k
+            )}</dt><div class="pills" style="margin:0">${v.map((x) => `<span class="pill">${esc(x)}</span>`).join("")}</div></div>`
+        )
+        .join("")}</div></div>`);
+    }
+
+    const asp = p.aspirations || {};
+    const aspRows = Object.entries(asp).filter(([, v]) => v && (typeof v === "string" || v.length));
+    if (aspRows.length) {
+      parts.push(`<div class="sect"><h2>Aspirations</h2><div class="card"><dl class="star">${aspRows
+        .map(([k, v]) => starRow(k, Array.isArray(v) ? v.join(", ") : v))
+        .join("")}</dl></div></div>`);
+    }
+
+    box.innerHTML = parts.join("");
+  }
+
+  function starRow(label, value) {
+    if (!value) return "";
+    return `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`;
+  }
+
+  // `label` est déjà de l'HTML sûr (écrit en dur, pas une donnée de la base).
+  function cmdRow(label, value) {
+    return `<div><dt>${label}</dt><dd>${esc(value)}</dd></div>`;
+  }
+
+  function renderParams() {
+    const box = document.getElementById("paramsBody");
+    if (!state.searches.length) {
+      box.innerHTML = emptyHtml(
+        "Aucune recherche configurée",
+        "Une recherche, c'est un objectif : des mots-clés, des lieux, un type de contrat et un positionnement qui sert à réécrire le CV. Tu peux en avoir plusieurs en parallèle.",
+        ["/veille-profil"]
+      );
+      return;
+    }
+
+    const rows = [];
+    for (const s of state.searches) {
+      for (const [key, cfg] of Object.entries(s.sources || {})) {
+        const age = cfg.lastScrapeAt ? (Date.now() - new Date(cfg.lastScrapeAt).getTime()) / 86400000 : null;
+        const health = cfg.enabled === false ? "off" : age == null || age > 10 || !cfg.lastCount ? "warn" : "ok";
+        rows.push(`<tr>
+          <td><span class="dot ${health}"></span>${esc(SOURCES[key] || key)}</td>
+          <td style="color:var(--muted)">${esc(s.label || s.id)}</td>
+          <td>${cfg.enabled === false ? "désactivée" : "active"}</td>
+          <td class="num">${cfg.lastScrapeAt ? esc(ago(cfg.lastScrapeAt)) : "jamais"}</td>
+          <td class="num">${cfg.lastCount ?? "—"}</td>
+        </tr>`);
+      }
+    }
+
+    box.innerHTML = `
+      <div class="sect" style="margin-top:0">
+        <h2>Sources de scraping</h2>
+        <div class="card tbl-wrap"><table>
+          <thead><tr><th>Source</th><th>Recherche</th><th>État</th><th>Dernier passage</th><th>Offres</th></tr></thead>
+          <tbody>${rows.join("") || `<tr><td colspan="5" style="color:var(--faint)">Aucun passage enregistré.</td></tr>`}</tbody>
+        </table></div>
+        <p style="font-size:13px;color:var(--muted);margin:10px 0 0">
+          Un point ambre signale une source sans passage récent ou revenue vide — souvent le signe qu'un sélecteur a changé.
+          Vérifie-la avec <code class="cmd">/veille-source</code>.
+        </p>
+      </div>
+
+      <div class="sect">
+        <h2>Recherches<span class="of">${state.searches.length}</span></h2>
+        <div class="cards">${state.searches
+          .map(
+            (s) => `<div class="card">
+              <h3 style="font:600 15.5px/1.3 var(--sans);margin:0 0 2px">${esc(s.label || s.id)} <span class="src">${esc(s.code || s.id)}</span></h3>
+              <dl class="star" style="margin-top:11px">
+                ${starRow("Mots-clés", (s.queries || []).join(" · "))}
+                ${starRow("Lieux", (s.locations || []).join(" · "))}
+                ${starRow("Exclus", (s.excludeKeywords || []).join(" · "))}
+                ${starRow("Angle", s.positioning)}
+              </dl>
+            </div>`
+          )
+          .join("")}</div>
+      </div>
+
+      <div class="sect">
+        <h2>Commandes</h2>
+        <div class="card"><dl class="cmdlist">
+          ${cmdRow("/veille-scrape", "Interroge les sources actives, classe les nouvelles offres, purge les anciennes")}
+          ${cmdRow("/veille-cv &lt;ref&gt;", "Génère un CV adapté à une offre, à partir de sa référence (ex. ACH-042)")}
+          ${cmdRow("/veille-profil", "Entretien guidé pour construire ou compléter le profil")}
+          ${cmdRow("/veille-events", "Cherche salons et job datings correspondant à la recherche")}
+          ${cmdRow("/veille-source &lt;url&gt;", "Teste si un site est scrapable et prépare son extracteur")}
+          ${cmdRow("/veille-purge", "Nettoie les offres anciennes non retenues")}
+        </dl></div>
+      </div>`;
+  }
+
+  function emptyHtml(title, body, cmds) {
+    return `<div class="empty">
+      <h2>${esc(title)}</h2><p>${esc(body)}</p>
+      ${cmds ? `<div class="cmds">${cmds.map((c) => `<code class="cmd">${esc(c)}</code>`).join("")}</div>` : ""}
+    </div>`;
+  }
+
+  /* ------------------------------------------------------------ actions */
+
+  document.addEventListener("click", async (e) => {
+    const tab = e.target.closest(".tab");
+    if (tab) {
+      state.tab = tab.id.slice(2);
+      write("veille.tab", state.tab);
+      renderTabs();
+      return;
+    }
+
+    const chip = e.target.closest(".chip");
+    if (chip) {
+      if (chip.dataset.search) { state.activeSearch = chip.dataset.search; write("veille.search", state.activeSearch); }
+      if (chip.dataset.source) { state.filterSource = chip.dataset.source; write("veille.source", state.filterSource); }
+      if (chip.dataset.status) { state.filterStatus = chip.dataset.status; write("veille.status", state.filterStatus); }
+      render();
+      return;
+    }
+
+    const copy = e.target.closest(".ref");
+    if (copy) {
+      const text = copy.dataset.copy || "";
+      try { await navigator.clipboard.writeText(text); } catch {}
+      copy.classList.add("copied");
+      setTimeout(() => copy.classList.remove("copied"), 900);
+      return;
+    }
+
+    const act = e.target.closest(".act");
+    if (act && state.db) {
+      const id = act.dataset.id;
+      const wanted = act.dataset.status;
+      const offer = state.offers.find((o) => o.id === id);
+      if (!offer) return;
+      const next = offer.status === wanted ? "seen" : wanted;
+      act.disabled = true;
+      try {
+        await state.db.collection("offers").doc(id).update({ status: next, statusAt: new Date().toISOString() });
+      } catch (err) {
+        console.error("écriture refusée", err);
+      } finally {
+        act.disabled = false;
+      }
+    }
+  });
+
+  /* ---------------------------------------------------------- démarrage */
+
+  render();
+
+  (async () => {
+    const db = window.claude?.use ? await window.claude.use("db") : null;
+    if (!db) { state.offline = true; render(); return; }
+    state.db = db;
+    state.ready = true;
+
+    const onErr = (label) => (err) => console.error("abonnement " + label, err);
+
+    db.collection("searches").onSnapshot((snap) => {
+      state.searches = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      if (state.activeSearch !== "all" && !state.searches.some((s) => s.id === state.activeSearch)) {
+        state.activeSearch = "all";
+      }
+      render();
+    }, onErr("searches"));
+
+    db.collection("offers").orderBy("scrapedAt", "desc").limit(1000).onSnapshot((snap) => {
+      state.offers = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      render();
+    }, onErr("offers"));
+
+    db.collection("events").onSnapshot((snap) => {
+      state.events = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      render();
+    }, onErr("events"));
+
+    db.collection("cvs").onSnapshot((snap) => {
+      state.cvs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      render();
+    }, onErr("cvs"));
+
+    db.collection("profile").onSnapshot((snap) => {
+      state.profile = {};
+      for (const d of snap.docs) state.profile[d.id] = d.data();
+      render();
+    }, onErr("profile"));
+
+    render();
+  })();
+</script>

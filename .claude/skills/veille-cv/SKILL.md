@@ -38,18 +38,30 @@ Tout `profile/*`, plus le `positioning` de la recherche
 
 ## 4. Rédiger
 
+**Lis `docs/CV-RULES.md` avant de rédiger.** Ce fichier porte les règles
+détaillées, avec ce qui est mesuré par une étude et ce qui relève de la
+convention. Les principes ci-dessous en sont le résumé opérationnel ; en cas de
+doute, le fichier fait foi.
+
 Écris le CV en français, dans `cv/<REF>-<entreprise-slug>.md` puis une version
 mise en page dans `cv/<REF>-<entreprise-slug>.html`. Crée `cv/` au besoin.
 
 **Principes de fond**
 
-- **Une page.** Pour un profil junior, deux pages desservent.
+- **Une page.** Pour un profil junior, deux pages desservent : la seconde n'est
+  presque pas lue.
+- **Un titre sous le nom : l'intitulé exact du poste visé.** C'est le second
+  point que l'œil fixe, et le mot-clé le plus fort pour les outils de tri.
+- **Tout ce qui décide tient dans le tiers supérieur.** Le survol initial dure
+  quelques secondes et suit un schéma en F : poste, entreprise, dates et
+  formation doivent être lisibles sans défiler.
 - **Miroir du vocabulaire de l'annonce.** Si elle dit « sourcing fournisseurs »,
   n'écris pas « recherche de partenaires ». Reprends ses termes exacts partout
-  où ils décrivent vraiment ce que la personne a fait.
+  où ils décrivent vraiment ce que la personne a fait, et rattache chacun à une
+  action vérifiable plutôt qu'à une liste de mots-clés.
 - **Accroche de deux ou trois lignes en tête**, qui nomme le poste visé et
   l'entreprise, et articule le profil vers ce poste précis. Jamais une formule
-  passe-partout.
+  passe-partout, jamais un paragraphe d'intentions.
 - **Ordre des expériences et des puces piloté par l'annonce** : ce que l'offre
   demande en premier remonte en premier. C'est là que se joue l'adaptation.
 - **Chaque puce commence par un verbe d'action** et se termine, quand la matière
@@ -63,12 +75,16 @@ mise en page dans `cv/<REF>-<entreprise-slug>.html`. Crée `cv/` au besoin.
 **Principes de forme** (lisibilité machine et humaine)
 
 - Titres de sections standards et explicites : `Expériences professionnelles`,
-  `Formation`, `Compétences`, `Langues`.
-- Un seul flux de texte : pas de tableau, pas de colonnes, pas de zone de texte,
-  rien en en-tête ni en pied de page.
-- Pas d'icône à la place d'un mot : un intitulé écrit, pas un pictogramme.
-- Ordre chronologique inverse, dates en clair (`sept. 2024 – févr. 2025`).
-- Coordonnées en texte brut en haut.
+  `Formation`, `Compétences`, `Langues`. Jamais « Mon parcours » ou « À propos ».
+- Un seul flux de texte, **une seule colonne** : pas de tableau, pas de zone de
+  texte, rien en en-tête ni en pied de page. Les outils de tri lisent ligne par
+  ligne et entremêlent les colonnes.
+- Pas d'icône à la place d'un mot, et **aucune barre ou jauge de compétence** :
+  illisible par la machine, dénué de sens pour l'humain.
+- Ordre chronologique inverse, dates en clair et **au même format partout**
+  (`sept. 2024 – févr. 2025`).
+- Coordonnées en texte brut en haut. Ni âge, ni situation familiale, ni
+  nationalité. Photo facultative — son absence ne pénalise pas.
 
 La version HTML est faite pour être imprimée en PDF : une feuille A4, marges
 raisonnables, police système, styles imprimables (`@page { margin: 16mm }`),

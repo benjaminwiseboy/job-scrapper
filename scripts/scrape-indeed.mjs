@@ -3,6 +3,7 @@
 //
 // Usage: node scripts/scrape-indeed.mjs "<query>" "<location>"
 import { chromium } from "playwright";
+import { existsSync } from "node:fs";
 
 const query = process.argv[2] || "acheteur junior";
 const location = process.argv[3] || "France";
@@ -10,7 +11,14 @@ const location = process.argv[3] || "France";
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36";
 
-const browser = await chromium.launch();
+// Certains environnements cloud exposent un Chromium pré-installé à un chemin
+// fixe, avec une révision différente de celle attendue par le paquet playwright
+// installé -> on pointe dessus s'il existe plutôt que de retélécharger.
+const launchOptions = {};
+const preinstalledChromium = "/opt/pw-browsers/chromium";
+if (existsSync(preinstalledChromium)) launchOptions.executablePath = preinstalledChromium;
+
+const browser = await chromium.launch(launchOptions);
 const page = await browser.newPage({ userAgent: UA });
 
 const url = `https://fr.indeed.com/jobs?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}&sort=date`;

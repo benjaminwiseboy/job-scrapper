@@ -1,0 +1,12 @@
+{
+  "name": "job-scraper-test",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape:indeed": "node scripts/scrape-indeed.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.47.0"
+  }
+}

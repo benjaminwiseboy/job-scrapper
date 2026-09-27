@@ -20,11 +20,12 @@ import * as linkedin from "./sources/linkedin.mjs";
 import * as indeed from "./sources/indeed.mjs";
 import * as meteojob from "./sources/meteojob.mjs";
 import * as apec from "./sources/apec.mjs";
+import * as hellowork from "./sources/hellowork.mjs";
 
-const SOURCES = { linkedin, indeed, meteojob, apec };
+const SOURCES = { linkedin, indeed, meteojob, apec, hellowork };
 
 // Priorité en cas de doublon inter-sources : on garde la fiche la plus riche.
-const PRIORITE = ["apec", "meteojob", "indeed", "linkedin"];
+const PRIORITE = ["apec", "hellowork", "meteojob", "indeed", "linkedin"];
 
 const args = parseArgs(process.argv.slice(2));
 const config = buildConfig(args);

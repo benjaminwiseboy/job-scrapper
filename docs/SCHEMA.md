@@ -55,6 +55,20 @@ Produit par `scripts/scrape.mjs`, enrichi par `scripts/prepare-db.mjs` (`ref`,
 - `profile/skills` : `{outils: [], methodes: [], langues: [], certifications: []}`
 - `profile/aspirations` : `{secteurs, taille, valeurs, mobilite, remuneration, refus}`
 
+## `dismissed/<searchId>` — les offres écartées à la main
+
+`{ids: ["indeed_...", ...], updatedAt}` — un seul document par recherche, pour ne
+pas consommer le plafond de 5000.
+
+Une offre écartée reste d'abord en base, donc le dédoublonnage suffit. Mais la
+purge finit par la supprimer, et elle sort alors des identifiants connus : rien
+n'empêcherait plus le scraping suivant de la réécrire comme une nouveauté. Ce
+document fait donc survivre la décision à la suppression de la fiche. Il est
+alimenté par `/veille-purge` et lu par `/veille-scrape`.
+
+Seules les offres en `status: "rejected"` y entrent — une offre classée `hors`
+par la machine n'est pas une décision humaine et peut être reclassée.
+
 ## `events/<id>` — salons et job datings
 
 `{title, type, date, endDate, location, url, source, searchId, note, status}`

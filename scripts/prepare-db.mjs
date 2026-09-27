@@ -8,9 +8,13 @@
 //   node scripts/prepare-db.mjs --report run.json --search achats --code ACH \
 //     --next-ref 1 --known known/ --out docs/
 //
-// --known : dossier contenant un fichier par docId déjà en base (tel que
-//           produit par une lecture `query ... out_dir`), ou fichier JSON
-//           listant les docId. Sert à ne réécrire que les nouveautés.
+// --known     : dossier contenant un fichier par docId déjà en base (tel que
+//               produit par une lecture `query ... out_dir`), ou fichier JSON
+//               listant les docId. Sert à ne réécrire que les nouveautés.
+// --dismissed : document `dismissed/<recherche>` ({ids: [...]}), les offres
+//               écartées à la main puis purgées. Sans lui, une offre écartée
+//               reviendrait au scraping suivant sa purge — la décision humaine
+//               survit à la suppression de la fiche.
 
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs";
 import { join, basename } from "node:path";
@@ -22,6 +26,8 @@ const code = (args.code || searchId.slice(0, 3)).toUpperCase();
 const outDir = args.out || "db-writes";
 
 const known = loadKnown(args.known);
+const dismissed = loadDismissed(args.dismissed);
+for (const id of dismissed) known.add(id);
 let nextRef = Number(args["next-ref"] || 1);
 
 if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
@@ -29,8 +35,13 @@ mkdirSync(outDir, { recursive: true });
 
 const fresh = [];
 const skipped = [];
+const rejetees = [];
 
 for (const offer of report.offers) {
+  if (dismissed.has(offer.docId)) {
+    rejetees.push(offer.docId);
+    continue;
+  }
   if (known.has(offer.docId)) {
     skipped.push(offer.docId);
     continue;
@@ -67,6 +78,7 @@ console.log(
       code,
       nouvelles: fresh.length,
       deja_connues: skipped.length,
+      ecartees_ignorees: rejetees.length,
       next_ref_apres: nextRef,
       lots: batches.length,
       refs: fresh.length ? `${fresh[0].ref} → ${fresh[fresh.length - 1].ref}` : null,
@@ -83,6 +95,16 @@ for (let i = 0; i < batches.length; i++) {
 }
 
 // ---------------------------------------------------------------- utilitaires
+
+/** Document `dismissed/<recherche>` : {ids: [...]}, ou simple tableau. */
+function loadDismissed(path) {
+  const set = new Set();
+  if (!path || !existsSync(path)) return set;
+  const raw = JSON.parse(readFileSync(path, "utf8"));
+  const doc = raw.data || raw;
+  for (const id of doc.ids || (Array.isArray(doc) ? doc : [])) set.add(String(id));
+  return set;
+}
 
 function loadKnown(path) {
   const set = new Set();

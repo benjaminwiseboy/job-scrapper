@@ -171,7 +171,19 @@
     transition: .14s; user-select: all;
   }
   .ref:hover { color: var(--accent); border-color: var(--accent); }
-  .ref.copied { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  [data-copy].copied { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+  /* Le CV produit, sur la ligne de son offre. Bouton et non lien : un href
+     file:// depuis une page https est bloqué par le navigateur sans rien
+     signaler — copier le chemin est la seule action qui aboutisse. */
+  .cv {
+    appearance: none; cursor: pointer; font: 500 10.5px/1 var(--mono);
+    padding: 3px 6px; border-radius: 4px; max-width: 26ch;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    background: var(--accent-soft); color: var(--accent);
+    border: 1px solid transparent; transition: .14s;
+  }
+  .cv:hover { border-color: var(--accent); }
 
   .row .head { min-width: 0; }
   .row .title { font: 600 15px/1.35 var(--sans); letter-spacing: -.005em; margin: 0; }
@@ -303,6 +315,8 @@
     apec: "APEC",
     francetravail: "France Travail",
   };
+
+  let cvByOffer = new Map();
 
   const TIERS = [
     { key: "cible", label: "Cible", hint: "à postuler en priorité" },
@@ -500,6 +514,15 @@
   }
 
   function renderOffers() {
+    // Index des CV par offre, reconstruit à chaque rendu : la ligne d'offre
+    // affiche le fichier produit, et le clic en copie le chemin — un lien
+    // file:// depuis une page https est bloqué par le navigateur, sans erreur
+    // visible, donc copier le chemin est la seule action qui aboutisse.
+    cvByOffer = new Map();
+    for (const cv of state.cvs) {
+      if (cv.offerDocId) cvByOffer.set(cv.offerDocId, cv);
+    }
+
     const box = document.getElementById("offersList");
     if (state.offline) {
       box.innerHTML = emptyHtml("Base inaccessible", "Cette vue ne peut pas lire la base de l'artefact. Ouvre le dashboard depuis ton compte pour voir tes offres.");
@@ -544,6 +567,14 @@
     meta.push(when);
     meta.push(`<span class="src">${esc(SOURCES[o.source] || o.source)}</span>`);
     if (o.alsoOn?.length) meta.push(`<span class="also">aussi sur ${esc(o.alsoOn.map((s) => SOURCES[s] || s).join(", "))}</span>`);
+
+    const cv = cvByOffer.get(o.id);
+    if (cv?.filePath) {
+      const file = String(cv.filePath).split(/[\\/]/).pop();
+      meta.push(
+        `<button class="cv" data-copy="${esc(cv.filePath)}" title="Copier le chemin du fichier">CV ${esc(file)}</button>`
+      );
+    }
 
     const href = safeUrl(o.url);
     return `<article class="${cls}">
@@ -790,7 +821,7 @@
       return;
     }
 
-    const copy = e.target.closest(".ref");
+    const copy = e.target.closest("[data-copy]");
     if (copy) {
       const text = copy.dataset.copy || "";
       try { await navigator.clipboard.writeText(text); } catch {}

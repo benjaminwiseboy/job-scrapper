@@ -111,9 +111,31 @@ que se joue l'adaptation, bien plus que dans l'accroche.
 - Les qualités sans preuve : « rigoureux », « dynamique », « autonome ». Elles
   n'apportent rien à la machine et rien au recruteur.
 - Les expériences anciennes sans rapport avec la cible.
-- Les centres d'intérêt génériques (« voyage, lecture, cinéma »). N'en garder un
-  que s'il démontre quelque chose d'utile.
 - **Une page** pour un profil junior. La page deux n'est presque pas lue.
+
+### Le cas des centres d'intérêt
+
+Ce qu'il faut couper, ce sont les **centres d'intérêt génériques** — « voyage,
+lecture, cinéma, musique » — qui n'apprennent rien et occupent une place rare.
+Pas la rubrique elle-même : en France elle reste un usage, et son absence totale
+peut surprendre.
+
+Garder deux ou trois lignes, à condition que chacune **démontre quelque chose**
+que le reste du CV ne dit pas :
+
+- un engagement associatif avec une responsabilité réelle — c'est du leadership ;
+- une pratique sportive ou artistique exigeante et suivie — c'est de la
+  constance, argument utile quand le parcours est court ;
+- une activité liée au métier visé — une veille sectorielle, un side project.
+
+Deux précisions qui comptent pour un profil junior :
+
+**Ce qui démontre une compétence n'est pas un loisir.** Un projet
+entrepreneurial, même à petite échelle, relève des expériences, pas des centres
+d'intérêt : le ranger en bas de page revient à en effacer la valeur.
+
+**Le cas est moins fort quand le parcours est déjà dense.** À expérience égale,
+la place vaut mieux pour une puce chiffrée de plus.
 
 ### 8. Ne jamais surpromettre
 

@@ -44,9 +44,21 @@ est de toute façon expirée.
    conversation, puis inspecte les fichiers.
 2. Lis `cvs` pour constituer la liste des `offerDocId` protégés.
 3. Établis la liste à supprimer selon la politique ci-dessus.
-4. Supprime par lots de 50 (`op: "delete"`), en épinglant `if_version` — la
+4. **Avant de supprimer, conserve la trace des offres écartées à la main.**
+   Pour toute offre en `status: "rejected"` sur le point d'être purgée, ajoute
+   son `doc_id` au document `dismissed/<searchId>` (champ `ids`, un tableau).
+   Lis-le d'abord, fusionne, réécris avec `if_version`.
+
+   Sans cela, l'offre sort de la base, donc de la liste des identifiants connus,
+   et le scraping suivant la réécrit comme une nouveauté : ta décision de
+   l'écarter serait perdue. C'est surtout vrai pour Indeed, dont les offres n'ont
+   pas de date exploitable et ne sont donc jamais filtrées par la fenêtre.
+
+   Ne fais ce report que pour `rejected`. Une offre classée `hors` par la machine
+   n'est pas une décision humaine : si elle revient, elle sera reclassée.
+5. Supprime par lots de 50 (`op: "delete"`), en épinglant `if_version` — la
    version figure dans chaque fichier lu.
-5. Nettoie `.veille-tmp/`.
+6. Nettoie `.veille-tmp/`.
 
 ## Rendre compte
 

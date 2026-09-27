@@ -52,9 +52,15 @@ Récupère les identifiants déjà en base sans en charger le contenu :
 `out_dir` `.veille-tmp/known-<id>` — les documents sont écrits en fichiers dont
 le nom est le `doc_id`, ce qui suffit.
 
+Lis aussi `dismissed/<id>` (`ArtifactData` `get`) et enregistre-le dans
+`.veille-tmp/dismissed-<id>.json`. Ce document liste les offres que
+l'utilisateur a écartées à la main et qui ont depuis été purgées : sans lui,
+elles reviendraient comme des nouveautés. S'il n'existe pas, passe l'option.
+
 ```
 node scripts/prepare-db.mjs --report .veille-tmp/run-<id>.json --search <id> \
-  --code <CODE> --next-ref <nextRef> --known .veille-tmp/known-<id> --out db-writes
+  --code <CODE> --next-ref <nextRef> --known .veille-tmp/known-<id> \
+  --dismissed .veille-tmp/dismissed-<id>.json --out db-writes
 ```
 
 Le script attribue les références (`ACH-042`), écrit un fichier JSON par offre

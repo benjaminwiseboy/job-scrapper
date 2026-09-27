@@ -43,6 +43,10 @@ détaillées, avec ce qui est mesuré par une étude et ce qui relève de la
 convention. Les principes ci-dessous en sont le résumé opérationnel ; en cas de
 doute, le fichier fait foi.
 
+**Pour un poste technique**, lis aussi `docs/CV-RULES-TECH.md` : échelle qui rend
+l'impact crédible, stack du poste le plus récent, livraison de bout en bout, et
+rubrique Projets pour un profil junior.
+
 Écris le CV en français, dans `cv/<REF>-<entreprise-slug>.md` puis une version
 mise en page dans `cv/<REF>-<entreprise-slug>.html`. Crée `cv/` au besoin.
 
@@ -64,8 +68,15 @@ mise en page dans `cv/<REF>-<entreprise-slug>.html`. Crée `cv/` au besoin.
   passe-partout, jamais un paragraphe d'intentions.
 - **Ordre des expériences et des puces piloté par l'annonce** : ce que l'offre
   demande en premier remonte en premier. C'est là que se joue l'adaptation.
-- **Chaque puce commence par un verbe d'action** et se termine, quand la matière
-  existe, par un résultat chiffré tiré du bloc STAR.
+- **Chaque puce suit la formule X-Y-Z** : réalisé **[X]**, mesuré par **[Y]**, en
+  faisant **[Z]**. C'est la formule de Google, et elle force à produire les trois
+  éléments qu'on omet spontanément — le résultat, son chiffre, et la méthode.
+  Conversion depuis le profil, qui est stocké en STAR : le **Résultat** donne
+  X (l'effet) et Y (le chiffre), l'**Action** donne Z, la **Situation** fournit
+  l'échelle à glisser dans Y ou Z. Commence toujours par un verbe d'action.
+  Détail et exemples dans `docs/CV-RULES-TECH.md`.
+- **Une puce sans Y vaut mieux qu'une puce avec un Y fabriqué.** Si le bloc STAR
+  ne porte pas de résultat chiffré, écris X et Z sans inventer de chiffre.
 - **Les chiffres estimés sont formulés comme tels** (« environ », « une
   quarantaine de ») — jamais présentés comme mesurés.
 - **N'invente rien.** Aucune compétence, aucun chiffre, aucune expérience qui ne

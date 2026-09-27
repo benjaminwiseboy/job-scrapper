@@ -85,6 +85,8 @@ scripts/
   sources/            un module par job board
 dashboard/index.html  le dashboard (publié comme artefact)
 docs/SCHEMA.md        structure de la base
+docs/CV-RULES.md      règles de rédaction, sources séparées des conventions
+docs/CV-RULES-TECH.md X-Y-Z, STAR côté Amazon, spécificités des postes tech
 .claude/skills/       les commandes
 ```
 

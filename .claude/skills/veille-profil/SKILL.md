@@ -73,7 +73,10 @@ un profil junior ce sont les plus utiles). Pour chacune :
   volumes, nombre de dossiers.
 
 **Insiste sur le résultat.** C'est ce qui manque à presque tous les CV juniors
-et ce qui fait la différence. Si l'utilisateur n'a pas de chiffre, aide-le à en
+et ce qui fait la différence. C'est aussi ce que `/veille-cv` convertit ensuite
+en puces au format X-Y-Z : le Résultat fournit le chiffre, l'Action la méthode,
+la Situation l'échelle. Une expérience sans résultat ni volume ne produira
+qu'une puce creuse — d'où l'insistance ici plutôt que plus tard. Si l'utilisateur n'a pas de chiffre, aide-le à en
 reconstruire un par le raisonnement (« combien de fournisseurs dans ton
 portefeuille ? sur quel volume d'achat ? »), et note-le comme une estimation
 pour qu'on le formule prudemment plus tard. Ne fabrique jamais un chiffre

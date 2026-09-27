@@ -123,3 +123,7 @@ fusion partielle.
 Récapitule ce qui est enregistré et ce qui reste creux (une expérience sans
 résultat chiffré, une formation sans contenu). Si des offres sont déjà en base
 et non classées, propose `/veille-scrape` pour les classer avec ce profil frais.
+
+Affiche ensuite le dashboard : outil `Artifact`, `action: "open"`, avec l'URL —
+l'onglet Profil montre ce qui vient d'être enregistré, et c'est là que
+l'utilisateur vérifie que rien n'a été déformé.

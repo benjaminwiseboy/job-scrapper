@@ -69,3 +69,6 @@ Liste chronologique : date, événement, lieu, et l'intérêt en une ligne.
 Distingue ce qui demande une inscription à ne pas manquer. Signale les angles de
 recherche qui n'ont rien donné — c'est une information utile, pas un échec à
 masquer.
+
+Termine en affichant le dashboard : outil `Artifact`, `action: "open"`, avec
+l'URL.

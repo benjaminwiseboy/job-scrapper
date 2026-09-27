@@ -6,6 +6,25 @@ un dashboard partagé qui sert à la fois d'interface et de base de données.
 
 Tout tourne **en local, sur invocation d'une commande** — aucune tâche planifiée.
 
+## Deux moitiés, jamais liées par un lancement
+
+**Le dashboard est la vue, Claude Code est le moteur.** Rien ne « démarre » :
+
+- Le dashboard est une page publiée en permanence à son URL, dont les données
+  vivent côté serveur. On l'ouvre dans un navigateur, depuis n'importe quel
+  appareil, y compris pour changer le statut d'une offre. Dans Claude Code,
+  `/artifacts` le liste et `Ctrl+]` rouvre le dernier artefact de la session.
+- Les commandes `/veille-*` sont des skills de projet : elles ne sont reconnues
+  que par une session **Claude Code ouverte dans ce dossier**. Le chat de
+  l'artefact sur claude.ai n'a ni système de fichiers, ni Node, ni navigateur —
+  il ne peut donc ni scraper ni écrire un CV.
+
+Si la page est ouverte pendant qu'une commande tourne, elle se met à jour seule :
+elle est abonnée à la base, sans rechargement.
+
+Les skills ajoutées ou modifiées sont découvertes au démarrage de Claude Code —
+après un `git pull` qui en apporte de nouvelles, le redémarrer.
+
 ## Les commandes
 
 | Commande | Ce qu'elle fait |

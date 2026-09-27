@@ -115,7 +115,10 @@ l'étape 1) :
 Un tableau compact : source, offres retenues, état. Puis le nombre de
 nouveautés, la répartition par niveau, les références attribuées (`ACH-105 →
 ACH-131`), ce qui a été purgé, et les cibles les plus intéressantes en deux ou
-trois lignes. Termine par le lien du dashboard et le rappel que
-`/veille-cv <ref>` génère un CV adapté.
+trois lignes. Rappelle que `/veille-cv <ref>` génère un CV adapté.
+
+Termine en affichant le dashboard : outil `Artifact`, `action: "open"`, avec
+l'URL. L'utilisateur vient de déclencher un scraping, il veut en voir le
+résultat sans avoir à retrouver le lien.
 
 Nettoie `.veille-tmp/` en fin de course.

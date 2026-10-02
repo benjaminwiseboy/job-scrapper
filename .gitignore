@@ -3,3 +3,4 @@ db-writes/
 cv/
 details/
 .veille-tmp/
+dist/

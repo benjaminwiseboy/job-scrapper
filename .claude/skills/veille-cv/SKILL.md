@@ -1,14 +1,18 @@
 ---
-name: veille-cv
+name: cv
 description: Génère un CV adapté à une offre précise du dashboard « Veille Emploi », à partir de sa référence courte (ex. ACH-042) ou de son URL. Utiliser quand l'utilisateur veut un CV sur mesure, adapter son CV à une annonce, ou postuler à une offre.
 ---
 
 # Générer un CV adapté à une offre
 
 Argument : une référence (`ACH-042`), ou une URL d'annonce, ou à défaut un
-intitulé à retrouver. Artefact
-`https://claude.ai/artifact/Wk81s5tNtTEtmydfobfjcx`, schéma dans
-`docs/SCHEMA.md`.
+intitulé à retrouver.
+
+**Profil actif** : `node "${CLAUDE_PLUGIN_ROOT}/scripts/veille-config.mjs"` donne
+`artifactUrl` (notée URL ci-dessous) et `workspace` (noté `<W>`) ; code de sortie
+3 = aucun profil, propose `/veille:demarrer` et arrête-toi. Règles communes :
+`${CLAUDE_PLUGIN_ROOT}/docs/CONTEXTE.md`. Schéma :
+`${CLAUDE_PLUGIN_ROOT}/docs/SCHEMA.md`.
 
 ## 1. Retrouver l'offre
 
@@ -48,7 +52,7 @@ l'adaptation sera plus grossière.
 
 Tout `profile/*`, plus le `positioning` de la recherche
 (`searches/<searchId>`). Si le profil est vide, arrête-toi : renvoie vers
-`/veille-profil`, un CV inventé n'a aucune valeur.
+`/veille:profil`, un CV inventé n'a aucune valeur.
 
 ## 4. Combler les écarts par quelques questions
 
@@ -78,7 +82,7 @@ question qui souffle la réponse attendue.
 un nouveau bloc dans `profile/experiences.items[]` s'il s'agit d'une expérience
 absente, un complément aux champs `action` ou `result` d'une expérience
 existante, une entrée dans `profile/skills`. Réécris le document complet
-(`set`) avec `if_version`, comme le fait `/veille-profil`.
+(`set`) avec `if_version`, comme le fait `/veille:profil`.
 
 C'est le cœur de la boucle : **chaque CV généré rend le profil plus riche**, et
 les CV suivants en profitent. Un écart comblé ici ne sera plus jamais une
@@ -88,17 +92,17 @@ Si aucune question n'a lieu d'être, passe à la suite sans meubler.
 
 ## 5. Rédiger
 
-**Lis `docs/CV-RULES.md` avant de rédiger.** Ce fichier porte les règles
+**Lis `${CLAUDE_PLUGIN_ROOT}/docs/CV-RULES.md` avant de rédiger.** Ce fichier porte les règles
 détaillées, avec ce qui est mesuré par une étude et ce qui relève de la
 convention. Les principes ci-dessous en sont le résumé opérationnel ; en cas de
 doute, le fichier fait foi.
 
-**Pour un poste technique**, lis aussi `docs/CV-RULES-TECH.md` : échelle qui rend
+**Pour un poste technique**, lis aussi `${CLAUDE_PLUGIN_ROOT}/docs/CV-RULES-TECH.md` : échelle qui rend
 l'impact crédible, stack du poste le plus récent, livraison de bout en bout, et
 rubrique Projets pour un profil junior.
 
-Écris le CV en français, dans `cv/<REF>-<entreprise-slug>.md` puis une version
-mise en page dans `cv/<REF>-<entreprise-slug>.html`. Crée `cv/` au besoin.
+Écris le CV en français, dans `<W>/cv/<REF>-<entreprise-slug>.md` puis une version
+mise en page dans `<W>/cv/<REF>-<entreprise-slug>.html`. Crée `<W>/cv/` au besoin.
 
 **Principes de fond**
 
@@ -124,7 +128,7 @@ mise en page dans `cv/<REF>-<entreprise-slug>.html`. Crée `cv/` au besoin.
   Conversion depuis le profil, qui est stocké en STAR : le **Résultat** donne
   X (l'effet) et Y (le chiffre), l'**Action** donne Z, la **Situation** fournit
   l'échelle à glisser dans Y ou Z. Commence toujours par un verbe d'action.
-  Détail et exemples dans `docs/CV-RULES-TECH.md`.
+  Détail et exemples dans `${CLAUDE_PLUGIN_ROOT}/docs/CV-RULES-TECH.md`.
 - **Une puce sans Y vaut mieux qu'une puce avec un Y fabriqué.** Si le bloc STAR
   ne porte pas de résultat chiffré, écris X et Z sans inventer de chiffre.
 - **Les chiffres estimés sont formulés comme tels** (« environ », « une
@@ -136,7 +140,7 @@ mise en page dans `cv/<REF>-<entreprise-slug>.html`. Crée `cv/` au besoin.
   quelque chose** que le reste du CV ne dit pas (engagement associatif avec une
   responsabilité, pratique exigeante et suivie, activité liée au métier). Rien
   de générique. Et un projet entrepreneurial se range dans les expériences, pas
-  ici — l'y reléguer effacerait sa valeur. Voir `docs/CV-RULES.md`.
+  ici — l'y reléguer effacerait sa valeur. Voir `${CLAUDE_PLUGIN_ROOT}/docs/CV-RULES.md`.
 
 **Principes de forme** (lisibilité machine et humaine)
 
@@ -152,20 +156,29 @@ mise en page dans `cv/<REF>-<entreprise-slug>.html`. Crée `cv/` au besoin.
 - Coordonnées en texte brut en haut. Ni âge, ni situation familiale, ni
   nationalité. Photo facultative — son absence ne pénalise pas.
 
-La version HTML est faite pour être imprimée en PDF : une feuille A4, marges
-raisonnables, police système, styles imprimables (`@page { margin: 16mm }`),
-sans dépendance externe. Indique à l'utilisateur qu'il l'ouvre dans son
-navigateur et imprime en PDF.
+La version HTML est la source du PDF : une feuille A4, marges raisonnables,
+police système, styles imprimables (`@page { margin: 16mm }`), sans dépendance
+externe. Produis ensuite le PDF, qui est le fichier à envoyer :
+
+```
+node "${CLAUDE_PLUGIN_ROOT}/scripts/cv-pdf.mjs" "<W>/cv/<REF>-<entreprise-slug>.html"
+```
+
+Le script écrit `<W>/cv/<REF>-<entreprise-slug>.pdf` à côté du HTML et imprime les
+chemins absolus en JSON. Ouvre le PDF avec `Read` pour vérifier qu'il tient sur
+une page ; s'il déborde, resserre le contenu plutôt que la police.
 
 ## 6. Enregistrer la trace
 
 `ArtifactData` `set` sur `cvs/<REF>_<horodatage court>` :
-`{offerRef, offerDocId, offerTitle, company, searchId, filePath, createdAt}`.
+`{offerRef, offerDocId, offerTitle, company, searchId, filePath, pdfPath, createdAt}`.
 
-`filePath` doit être le **chemin absolu** du fichier HTML : le dashboard affiche
-le CV sur la ligne de son offre, et le clic copie ce chemin. Un chemin relatif
-n'y servirait à rien. `offerDocId` est indispensable — c'est par lui que le
-dashboard rattache le CV à l'offre.
+`pdfPath` et `filePath` sont les **chemins absolus** du PDF et du HTML, tels
+qu'imprimés par `cv-pdf.mjs`. L'onglet CV du dashboard les affiche et le clic
+les copie — une page https ne peut pas ouvrir un fichier local, copier le
+chemin est la seule action qui aboutisse. Un chemin relatif n'y servirait à
+rien. `offerDocId` est indispensable — c'est par lui que le dashboard rattache
+le CV à l'offre.
 
 Cela alimente aussi le compteur « CV générés ».
 
@@ -174,7 +187,8 @@ Passe aussi l'offre en `status: "seen"` si elle était en `new` (avec
 
 ## 7. Rendre compte
 
-Donne le chemin des deux fichiers, puis, en quelques lignes :
+Donne le chemin du PDF (et du HTML pour retouche), rappelle qu'il figure dans
+l'onglet CV du dashboard, puis, en quelques lignes :
 
 - **Les points forts** de la candidature, tels que l'annonce les valorise.
 - **Les manques** : ce que l'offre demande et que le profil ne couvre pas. Sois

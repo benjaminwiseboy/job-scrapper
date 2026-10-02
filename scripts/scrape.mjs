@@ -1,20 +1,28 @@
 // Orchestrateur : lit une configuration de recherche, interroge les sources
 // activées, applique la fenêtre temporelle, dédoublonne, et écrit un rapport
 // JSON. Les scripts ne parlent jamais à l'artefact — c'est la commande
-// /veille-scrape qui lit ce JSON et écrit en base.
+// /veille:scrape qui lit ce JSON et écrit en base.
 //
 //   node scripts/scrape.mjs --config <fichier.json> [--out <fichier.json>]
-//   node scripts/scrape.mjs --query "acheteur junior" --location France
+//   node scripts/scrape.mjs --query "acheteur junior" --location France [--contracts alternance,stage]
 //
 // Fenêtre : depuis le dernier scrape de la source, plafonnée à maxDays (7 par
 // défaut). Souplesse volontaire — les sources qui ne datent pas leurs offres
 // (dateConfidence "unknown") ne sont jamais écartées par la fenêtre : c'est le
 // dédoublonnage côté base qui garantit qu'on ne revoit pas une offre connue.
+//
+// Contrat : une offre dont le contrat est connu et ne fait pas partie de
+// `contracts` est écartée ici, avant la base. Un contrat inconnu passe. Pour
+// une source qui ne l'affiche pas sur ses cartes (LinkedIn), on lit d'abord la
+// fiche de l'offre.
+//
+// Écoles : une « alternance » publiée par une école ou un organisme de
+// formation est du recrutement d'étudiants déguisé ; elle est écartée aussi.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { launchBrowser } from "./lib/browser.mjs";
 import { windowStart } from "./lib/dates.mjs";
-import { dedupKey, slug } from "./lib/normalize.mjs";
+import { contractMismatch, dedupKey, mentionedContracts, schoolAd, slug } from "./lib/normalize.mjs";
 
 import * as linkedin from "./sources/linkedin.mjs";
 import * as indeed from "./sources/indeed.mjs";
@@ -33,7 +41,17 @@ const now = new Date();
 
 const requested = Object.entries(config.sources).filter(([name, s]) => s.enabled !== false && SOURCES[name]);
 const needsBrowser = requested.some(([name]) => SOURCES[name].needsBrowser);
-const browser = needsBrowser ? await launchBrowser() : null;
+// A missing Chromium only fails the browser sources, never the whole run.
+let browser = null;
+let browserError = null;
+if (needsBrowser) {
+  try {
+    browser = await launchBrowser();
+  } catch (err) {
+    const reason = String(err.message || err).split(/\r?\n/)[0];
+    browserError = `navigateur indisponible (${reason}) — installer Chromium : node scripts/setup.mjs --install-browser`;
+  }
+}
 
 const report = [];
 const collected = [];
@@ -42,7 +60,13 @@ try {
   for (const [name, sourceConfig] of requested) {
     const mod = SOURCES[name];
     const from = windowStart(sourceConfig.lastScrapeAt, config.maxDays, now);
+    if (mod.needsBrowser && !browser) {
+      report.push({ source: name, label: mod.label, ok: false, from: from.toISOString(), found: 0, kept: 0, wrongContract: 0, schoolAds: 0, error: browserError });
+      continue;
+    }
     let found = 0;
+    let wrongContract = 0;
+    let schoolAds = 0;
     const kept = [];
 
     try {
@@ -61,14 +85,25 @@ try {
             offer.query = query;
             if (!insideWindow(offer, from)) continue;
             if (isExcluded(offer, config.excludeKeywords)) continue;
+            if (config.contracts.length && !offer.contractTypes.length && mod.contractText) {
+              offer.contractTypes = mentionedContracts(await fetchContractText(mod, offer));
+            }
+            if (contractMismatch(offer, config.contracts)) {
+              wrongContract++;
+              continue;
+            }
+            if (schoolAd(offer)) {
+              schoolAds++;
+              continue;
+            }
             kept.push(offer);
           }
         }
       }
-      report.push({ source: name, label: mod.label, ok: true, from: from.toISOString(), found, kept: kept.length, error: null });
+      report.push({ source: name, label: mod.label, ok: true, from: from.toISOString(), found, kept: kept.length, wrongContract, schoolAds, error: null });
       collected.push(...kept);
     } catch (err) {
-      report.push({ source: name, label: mod.label, ok: false, from: from.toISOString(), found, kept: 0, error: String(err.message || err) });
+      report.push({ source: name, label: mod.label, ok: false, from: from.toISOString(), found, kept: 0, wrongContract, schoolAds, error: String(err.message || err) });
     }
   }
 } finally {
@@ -81,6 +116,7 @@ const result = {
   searchId: config.searchId,
   runAt: now.toISOString(),
   maxDays: config.maxDays,
+  contracts: config.contracts,
   report,
   counts: { collected: collected.length, afterDedupe: offers.length },
   offers,
@@ -95,7 +131,9 @@ if (args.out) {
 }
 
 for (const r of report) {
-  const status = r.ok ? `${r.kept}/${r.found} retenues` : `ÉCHEC — ${r.error}`;
+  const motifs = [r.wrongContract && `${r.wrongContract} contrat hors cible`, r.schoolAds && `${r.schoolAds} offres d'école`].filter(Boolean);
+  const ecartees = motifs.length ? ` (écartées : ${motifs.join(", ")})` : "";
+  const status = r.ok ? `${r.kept}/${r.found} retenues${ecartees}` : `ÉCHEC — ${r.error}`;
   console.error(`  ${r.label.padEnd(10)} ${status}`);
 }
 console.error(`  ${"TOTAL".padEnd(10)} ${offers.length} offres après dédoublonnage`);
@@ -106,6 +144,17 @@ function insideWindow(offer, from) {
   // Pas de date exploitable : on laisse passer, la base tranchera.
   if (!offer.postedAt || offer.dateConfidence === "unknown") return true;
   return new Date(offer.postedAt) >= from;
+}
+
+// One posting page per unknown contract: paced, and a failure only leaves the
+// contract unknown.
+async function fetchContractText(mod, offer) {
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    return await mod.contractText(offer);
+  } catch {
+    return "";
+  }
 }
 
 function isExcluded(offer, excludeKeywords) {
@@ -152,6 +201,7 @@ function buildConfig(args) {
       queries: raw.queries?.length ? raw.queries : [raw.query || "acheteur junior"],
       locations: raw.locations?.length ? raw.locations : [raw.location || "France"],
       excludeKeywords: raw.excludeKeywords || [],
+      contracts: raw.contracts || [],
       sources: raw.sources || defaultSources(),
     };
   }
@@ -162,6 +212,7 @@ function buildConfig(args) {
     queries: [args.query || "acheteur junior"],
     locations: [args.location || "France"],
     excludeKeywords: [],
+    contracts: args.contracts ? String(args.contracts).split(",").map((c) => c.trim()) : [],
     sources: args.sources
       ? Object.fromEntries(String(args.sources).split(",").map((s) => [s.trim(), { enabled: true }]))
       : defaultSources(),

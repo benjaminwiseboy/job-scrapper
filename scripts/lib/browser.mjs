@@ -1,12 +1,14 @@
 // Lancement Chromium partagé + utilitaires communs aux sources qui ont besoin
 // d'un vrai navigateur (Indeed, Météojob, APEC sont client-rendered ou protégés).
-import { chromium } from "playwright";
+// Playwright is imported lazily: HTTP-only sources (LinkedIn, Hellowork) must
+// keep working on a machine where it or its Chromium isn't installed yet.
 import { existsSync } from "node:fs";
 
 export const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36";
 
 export async function launchBrowser() {
+  const { chromium } = await import("playwright");
   const options = {};
   // Certains environnements exposent un Chromium pré-installé à un chemin fixe,
   // avec une révision différente de celle attendue par le paquet playwright.

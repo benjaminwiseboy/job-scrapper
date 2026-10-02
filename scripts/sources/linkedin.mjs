@@ -77,6 +77,37 @@ export async function scrape({ query, location, maxPages = 3, searchId, since })
   return offers;
 }
 
+// Search cards carry no contract. When the run filters on contracts, the
+// orchestrator asks for the posting's own text: LinkedIn's employment type
+// ("Stage") plus the description, where "CDI" or "alternance" is usually
+// written out. Returns "" on failure — the offer then stays "unknown".
+export async function contractText(offer) {
+  const res = await fetch(`https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${offer.externalId}`, {
+    headers: { "User-Agent": UA, "Accept-Language": "fr-FR,fr;q=0.9" },
+  });
+  if (!res.ok) return "";
+  const html = await res.text();
+  const criteria = [...html.matchAll(/description__job-criteria-subheader[^>]*>\s*([\s\S]*?)\s*<\/h3>\s*<span[^>]*>\s*([\s\S]*?)\s*<\/span>/g)];
+  const employment = criteria.find((m) => /type d.emploi|employment type/i.test(m[1]))?.[2] || "";
+  const description = html.match(/show-more-less-html__markup[^>]*>([\s\S]*?)<\/div>/)?.[1] || "";
+  return cleanText(`${stripTags(employment)} ${stripTags(description.replace(/<br\s*\/?>|<\/(p|li)>/gi, " "))}`);
+}
+
+// Is the posting still taking applications? A closed one keeps its page but
+// shows "Les candidatures ne sont plus acceptées" (class closed-job__flavor--closed);
+// a deleted one answers 404. Anything else (429, 999, network) is "unknown":
+// never close an offer on a guess.
+export async function checkOpen(offer) {
+  const res = await fetch(`https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${offer.externalId}`, {
+    headers: { "User-Agent": UA, "Accept-Language": "fr-FR,fr;q=0.9" },
+  });
+  if (res.status === 404 || res.status === 410) return { state: "closed", reason: "offre retirée" };
+  if (!res.ok) return { state: "unknown", status: res.status };
+  const html = await res.text();
+  if (/closed-job__flavor--closed/.test(html)) return { state: "closed", reason: "candidatures closes" };
+  return /top-card-layout__title|topcard__title/.test(html) ? { state: "open" } : { state: "unknown", status: res.status };
+}
+
 function stripTags(value) {
   return cleanText(String(value || "").replace(/<[^>]*>/g, ""));
 }

@@ -1,5 +1,5 @@
 ---
-name: veille-source
+name: source
 description: Teste si un site d'offres d'emploi ou d'événements est scrapable, rédige l'extracteur si oui, et explique le blocage si non. Utiliser quand l'utilisateur veut ajouter une source de scraping, vérifier une source, ou diagnostiquer une source qui ne remonte plus rien.
 ---
 
@@ -11,6 +11,15 @@ ou le nom d'une source déjà intégrée à diagnostiquer.
 Deux usages : intégrer une nouvelle source, ou comprendre pourquoi une source
 existante est revenue vide — c'est presque toujours un sélecteur qui a changé.
 
+**Où écrire le code.** Le diagnostic (étapes 1 et 2) marche partout. Pour
+intégrer ou réparer un extracteur, en revanche, il faut une copie modifiable du
+dépôt : les fichiers d'un plugin installé depuis GitHub
+(`${CLAUDE_PLUGIN_ROOT}`) sont remplacés à chaque mise à jour, une modification
+y serait perdue. Si `${CLAUDE_PLUGIN_ROOT}` est dans `~/.claude/plugins/cache/`,
+explique-le, livre le diagnostic et le code proposé, et suggère de l'ajouter au
+dépôt (clone + pull request, voir la section « Contribuer » du README). Si c'est
+un clone local chargé en place, écris directement dedans.
+
 ## 1. Diagnostiquer l'accès
 
 Dans cet ordre, en t'arrêtant dès que ça marche :
@@ -18,7 +27,7 @@ Dans cet ordre, en t'arrêtant dès que ça marche :
 1. **HTTP simple** — `curl` ou `fetch` avec un User-Agent de navigateur. Si le
    HTML contient déjà les offres, c'est le meilleur cas : pas de navigateur,
    rapide et robuste (c'est le cas de LinkedIn).
-2. **Navigateur** — un script Playwright reprenant `scripts/lib/browser.mjs`
+2. **Navigateur** — un script Playwright reprenant `${CLAUDE_PLUGIN_ROOT}/scripts/lib/browser.mjs`
    (`launchBrowser`, `newPage`, `dismissCookies`). Nécessaire pour les
    applications client-rendered (Météojob, APEC) et pour passer un contrôle
    Cloudflare basique (Indeed).
@@ -58,7 +67,7 @@ qui rend la fenêtre temporelle efficace.
 
 ## 3. Écrire l'extracteur
 
-Sur le modèle de `scripts/sources/meteojob.mjs`. Le contrat d'un module de
+Sur le modèle de `${CLAUDE_PLUGIN_ROOT}/scripts/sources/meteojob.mjs`. Le contrat d'un module de
 source :
 
 ```js
@@ -68,9 +77,9 @@ export const needsBrowser = true | false;
 export async function scrape({ browser, query, location, maxPages, searchId, since }) { /* -> offres[] */ }
 ```
 
-Construis chaque offre avec `makeOffer()` de `scripts/lib/normalize.mjs` (clé de
+Construis chaque offre avec `makeOffer()` de `${CLAUDE_PLUGIN_ROOT}/scripts/lib/normalize.mjs` (clé de
 dédoublonnage et forme canonique) et les dates avec `parseFrenchDate()` de
-`scripts/lib/dates.mjs`, en rendant honnêtement la confiance : `exact` pour une
+`${CLAUDE_PLUGIN_ROOT}/scripts/lib/dates.mjs`, en rendant honnêtement la confiance : `exact` pour une
 date machine, `approx` pour du relatif, `unknown` quand il n'y en a pas. Ne
 fabrique jamais une date pour faire passer une offre dans la fenêtre.
 
@@ -84,7 +93,7 @@ masse avant de considérer que ça marche.
 
 Après validation par l'utilisateur, et pas avant :
 
-- Déclare le module dans `SOURCES` de `scripts/scrape.mjs`, et sa place dans
+- Déclare le module dans `SOURCES` de `${CLAUDE_PLUGIN_ROOT}/scripts/scrape.mjs`, et sa place dans
   `PRIORITE` (l'ordre qui décide quelle fiche gagne en cas de doublon
   inter-sources : la plus riche d'abord).
 - Ajoute la source dans le libellé `SOURCES` de `dashboard/index.html` et
@@ -95,7 +104,7 @@ Après validation par l'utilisateur, et pas avant :
   sélecteur ont été rencontrés.
 
 Pour une source d'événements plutôt que d'offres, note-la dans
-`docs/EVENT-SOURCES.md` (crée le fichier au besoin) : `/veille-events` s'en sert.
+`${CLAUDE_PLUGIN_ROOT}/docs/EVENT-SOURCES.md` (crée le fichier au besoin) : `/veille:events` s'en sert.
 
 ## 5. Rendre compte
 

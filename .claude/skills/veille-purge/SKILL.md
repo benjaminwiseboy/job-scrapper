@@ -1,5 +1,5 @@
 ---
-name: veille-purge
+name: purge
 description: Nettoie les anciennes offres non retenues de la base du dashboard « Veille Emploi » pour rester sous le plafond de documents. Utiliser quand l'utilisateur veut purger, nettoyer ou archiver sa base d'offres.
 ---
 
@@ -9,10 +9,14 @@ La base d'un artefact plafonne à **5000 documents**. À une centaine d'offres p
 passage, on sature en quelques mois : la purge n'est pas un luxe, c'est ce qui
 empêche le système de mourir silencieusement.
 
-`/veille-scrape` l'applique automatiquement à chaque passage. Cette commande
+`/veille:scrape` l'applique automatiquement à chaque passage. Cette commande
 existe pour la lancer à la main ou pour un nettoyage plus agressif.
 
-Artefact `https://claude.ai/artifact/Wk81s5tNtTEtmydfobfjcx`.
+**Profil actif** : `node "${CLAUDE_PLUGIN_ROOT}/scripts/veille-config.mjs"` donne
+`artifactUrl` (notée URL ci-dessous) et `workspace` (noté `<W>`) ; code de sortie
+3 = aucun profil, propose `/veille:demarrer` et arrête-toi. Règles communes :
+`${CLAUDE_PLUGIN_ROOT}/docs/CONTEXTE.md`. Schéma :
+`${CLAUDE_PLUGIN_ROOT}/docs/SCHEMA.md`.
 
 ## Politique
 
@@ -28,7 +32,8 @@ Ancienneté mesurée sur `scrapedAt` (ou `postedAt` s'il est plus récent).
 
 | Cas | Seuil |
 |---|---|
-| `tier` = `hors` | 14 jours |
+| `closed` = `true` (offre pourvue ou retirée) | dès la purge suivante |
+| `tier` = `hors` | 2 jours |
 | `tier` = `null` (jamais classée) | 21 jours |
 | `status` = `rejected` | 21 jours |
 | `tier` = `possible`, `status` ∈ {`new`, `seen`} | 45 jours |
@@ -37,10 +42,19 @@ Ancienneté mesurée sur `scrapedAt` (ou `postedAt` s'il est plus récent).
 Une cible qu'on n'a pas touchée en deux mois n'est plus une cible : l'annonce
 est de toute façon expirée.
 
+Une offre fermée ne revient pas au scraping : les sources ne listent plus une
+annonce qui n'accepte plus de candidatures. La supprimer ne risque donc pas de
+la faire réapparaître comme une nouveauté.
+
+Le délai court des offres `hors` est délibéré : elles ne servent qu'à vérifier
+le classement du dernier passage, et au-delà elles noient le tableau. Une offre
+purgée sans date exploitable (Indeed) peut revenir au scraping suivant ; elle
+est alors reclassée, puis repurgée.
+
 ## Procédure
 
 1. Lis toute la collection : `ArtifactData` `query` sur `offers` avec
-   `out_dir .veille-tmp/purge` pour ne pas charger le contenu dans la
+   `out_dir <W>/.veille-tmp/purge` pour ne pas charger le contenu dans la
    conversation, puis inspecte les fichiers.
 2. Lis `cvs` pour constituer la liste des `offerDocId` protégés.
 3. Établis la liste à supprimer selon la politique ci-dessus.
@@ -58,7 +72,7 @@ est de toute façon expirée.
    n'est pas une décision humaine : si elle revient, elle sera reclassée.
 5. Supprime par lots de 50 (`op: "delete"`), en épinglant `if_version` — la
    version figure dans chaque fichier lu.
-6. Nettoie `.veille-tmp/`.
+6. Nettoie `<W>/.veille-tmp/`.
 
 ## Rendre compte
 
@@ -66,6 +80,6 @@ Le nombre supprimé par motif, le nombre conservé, et le total de documents
 restants rapporté au plafond. Si on dépasse 4000 documents, dis-le clairement et
 propose de durcir les seuils : c'est le moment d'agir, pas à 4900.
 
-Quand cette commande tourne dans le cadre d'un `/veille-scrape`, résume-la en une
+Quand cette commande tourne dans le cadre d'un `/veille:scrape`, résume-la en une
 seule ligne dans le rapport final — pas besoin d'un détail complet à chaque
 passage.

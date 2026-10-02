@@ -77,6 +77,19 @@ export async function scrape({ query, location, maxPages = 3, searchId, since })
   return offers;
 }
 
+// A withdrawn posting answers 410 Gone (404 for an unknown id); a live one 200.
+// HEAD is not enough: some proxies answer it differently, so GET without reading.
+export async function checkOpen(offer) {
+  const res = await fetch(`https://www.hellowork.com/fr-fr/emplois/${offer.externalId}.html`, {
+    headers: { "User-Agent": UA, "Accept-Language": "fr-FR,fr;q=0.9" },
+    redirect: "manual",
+  });
+  res.body?.cancel();
+  if (res.status === 410 || res.status === 404) return { state: "closed", reason: "offre retirée" };
+  if (res.status === 200) return { state: "open" };
+  return { state: "unknown", status: res.status };
+}
+
 function text(value) {
   return cleanText(
     String(value || "")

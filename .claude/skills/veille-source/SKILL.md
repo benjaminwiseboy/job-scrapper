@@ -1,5 +1,5 @@
 ---
-name: source
+name: veille-source
 description: Teste si un site d'offres d'emploi ou d'événements est scrapable, rédige l'extracteur si oui, et explique le blocage si non. Utiliser quand l'utilisateur veut ajouter une source de scraping, vérifier une source, ou diagnostiquer une source qui ne remonte plus rien.
 ---
 
@@ -13,12 +13,12 @@ existante est revenue vide — c'est presque toujours un sélecteur qui a chang�
 
 **Où écrire le code.** Le diagnostic (étapes 1 et 2) marche partout. Pour
 intégrer ou réparer un extracteur, en revanche, il faut une copie modifiable du
-dépôt : les fichiers d'un plugin installé depuis GitHub
-(`${CLAUDE_PLUGIN_ROOT}`) sont remplacés à chaque mise à jour, une modification
-y serait perdue. Si `${CLAUDE_PLUGIN_ROOT}` est dans `~/.claude/plugins/cache/`,
+dépôt : les fichiers d'une application installée par l'installeur
+(`${VEILLE_ROOT}`) sont remplacés à chaque mise à jour, une modification
+y serait perdue. Si `${VEILLE_ROOT}` est dans `~/.veille-emploi/app/`,
 explique-le, livre le diagnostic et le code proposé, et suggère de l'ajouter au
 dépôt (clone + pull request, voir la section « Contribuer » du README). Si c'est
-un clone local chargé en place, écris directement dedans.
+un clone local du dépôt, écris directement dedans.
 
 ## 1. Diagnostiquer l'accès
 
@@ -27,8 +27,8 @@ Dans cet ordre, en t'arrêtant dès que ça marche :
 1. **HTTP simple** — `curl` ou `fetch` avec un User-Agent de navigateur. Si le
    HTML contient déjà les offres, c'est le meilleur cas : pas de navigateur,
    rapide et robuste (c'est le cas de LinkedIn).
-2. **Navigateur** — un script Playwright reprenant `${CLAUDE_PLUGIN_ROOT}/scripts/lib/browser.mjs`
-   (`launchBrowser`, `newPage`, `dismissCookies`). Nécessaire pour les
+2. **Navigateur** — un script Playwright reprenant `${VEILLE_ROOT}/scripts/lib/browser.mjs`
+   (`launchBrowser`, `newPage`, `waitForResults`). Nécessaire pour les
    applications client-rendered (Météojob, APEC) et pour passer un contrôle
    Cloudflare basique (Indeed).
 
@@ -67,24 +67,39 @@ qui rend la fenêtre temporelle efficace.
 
 ## 3. Écrire l'extracteur
 
-Sur le modèle de `${CLAUDE_PLUGIN_ROOT}/scripts/sources/meteojob.mjs`. Le contrat d'un module de
+Sur le modèle de `${VEILLE_ROOT}/scripts/sources/meteojob.mjs`. Le contrat d'un module de
 source :
 
 ```js
 export const id = "<slug>";
 export const label = "<Nom affiché>";
 export const needsBrowser = true | false;
-export async function scrape({ browser, query, location, maxPages, searchId, since }) { /* -> offres[] */ }
+export async function scrape({ browser, page, query, location, maxPages, searchId, since, known }) { /* -> offres[] */ }
 ```
 
-Construis chaque offre avec `makeOffer()` de `${CLAUDE_PLUGIN_ROOT}/scripts/lib/normalize.mjs` (clé de
+Pour une source navigateur, l'orchestrateur fournit `page` : une page qu'une
+voie réutilise d'une recherche à l'autre (le bandeau cookies n'est alors fermé
+qu'une fois). Ne la ferme pas ; n'en ouvre une avec `newPage` que si elle est
+absente. Si le site bloque une deuxième navigation dans la même page (Indeed),
+exporte `freshPages = true` et ouvre une page neuve par page de résultats.
+
+Attends les cartes avec `waitForResults(page, <sélecteur des cartes>)`, jamais
+avec un `waitForTimeout` fixe : c'est ce qui coûtait le plus de temps au
+scraping. Une page bloquée par un CAPTCHA doit lever une erreur tout de suite
+(voir `apec.mjs`), pas attendre l'échéance.
+
+Si la source peut recevoir plusieurs requêtes simultanées sans refuser, ajoute
+son nombre de voies dans `LANES` de `scrape.mjs` (1 par défaut).
+
+Construis chaque offre avec `makeOffer()` de `${VEILLE_ROOT}/scripts/lib/normalize.mjs` (clé de
 dédoublonnage et forme canonique) et les dates avec `parseFrenchDate()` de
-`${CLAUDE_PLUGIN_ROOT}/scripts/lib/dates.mjs`, en rendant honnêtement la confiance : `exact` pour une
+`${VEILLE_ROOT}/scripts/lib/dates.mjs`, en rendant honnêtement la confiance : `exact` pour une
 date machine, `approx` pour du relatif, `unknown` quand il n'y en a pas. Ne
 fabrique jamais une date pour faire passer une offre dans la fenêtre.
 
-Si la source trie par date, ajoute l'arrêt anticipé de pagination (voir la fin
-de la boucle dans `apec.mjs`).
+Si la source trie par date, ajoute les deux arrêts anticipés de pagination
+(voir la fin de la boucle dans `apec.mjs`) : page hors fenêtre, et page
+entièrement déjà connue (`allKnown(offres de la page, known)`).
 
 **Teste sur au moins deux pages** et vérifie qu'aucun champ ne revient vide en
 masse avant de considérer que ça marche.
@@ -93,7 +108,7 @@ masse avant de considérer que ça marche.
 
 Après validation par l'utilisateur, et pas avant :
 
-- Déclare le module dans `SOURCES` de `${CLAUDE_PLUGIN_ROOT}/scripts/scrape.mjs`, et sa place dans
+- Déclare le module dans `SOURCES` de `${VEILLE_ROOT}/scripts/scrape.mjs`, et sa place dans
   `PRIORITE` (l'ordre qui décide quelle fiche gagne en cas de doublon
   inter-sources : la plus riche d'abord).
 - Ajoute la source dans le libellé `SOURCES` de `dashboard/index.html` et
@@ -104,7 +119,7 @@ Après validation par l'utilisateur, et pas avant :
   sélecteur ont été rencontrés.
 
 Pour une source d'événements plutôt que d'offres, note-la dans
-`${CLAUDE_PLUGIN_ROOT}/docs/EVENT-SOURCES.md` (crée le fichier au besoin) : `/veille:events` s'en sert.
+`${VEILLE_ROOT}/docs/EVENT-SOURCES.md` (crée le fichier au besoin) : `/veille-events` s'en sert.
 
 ## 5. Rendre compte
 

@@ -2,16 +2,18 @@
 // part de l'ancre et on descend : remonter avec closest() attrape un conteneur
 // global qui englobe tous les résultats. Les métadonnées sont dans des <li>
 // identifiés par l'attribut alt de leur icône, et la date est exacte.
-import { newPage, dismissCookies } from "../lib/browser.mjs";
-import { makeOffer } from "../lib/normalize.mjs";
+import { newPage, waitForResults } from "../lib/browser.mjs";
+import { makeOffer, allKnown } from "../lib/normalize.mjs";
 import { parseFrenchDate } from "../lib/dates.mjs";
 
 export const id = "apec";
 export const label = "APEC";
 export const needsBrowser = true;
 
-export async function scrape({ browser, query, location, maxPages = 3, searchId, since }) {
-  const page = await newPage(browser);
+const CARD = 'a[href*="/detail-offre/"]';
+
+export async function scrape({ browser, page: lanePage, query, location, maxPages = 3, searchId, since, known }) {
+  const page = lanePage || (await newPage(browser));
   const offers = [];
   const seen = new Set();
 
@@ -19,15 +21,18 @@ export async function scrape({ browser, query, location, maxPages = 3, searchId,
     for (let p = 0; p < maxPages; p++) {
       const params = new URLSearchParams({ motsCles: query, sortsType: "DATE", page: String(p) });
       if (location && !/^france$/i.test(location)) params.set("lieux", location);
-      await page.goto(`https://www.apec.fr/candidat/recherche-emploi.html/emploi?${params}`, {
+      const res = await page.goto(`https://www.apec.fr/candidat/recherche-emploi.html/emploi?${params}`, {
         waitUntil: "domcontentloaded",
         timeout: 30000,
       });
-      await page.waitForTimeout(2000);
-      if (p === 0) await dismissCookies(page);
-      await page.waitForTimeout(1500);
+      // DataDome answers 403 with a CAPTCHA: fail at once rather than wait for
+      // cards that will never come. We do not try to get past it.
+      if (res?.status() === 403 || page.frames().some((f) => /captcha-delivery/.test(f.url()))) {
+        throw new Error("CAPTCHA DataDome (HTTP 403) — source bloquée, à désactiver tant que ça dure");
+      }
+      if (!(await waitForResults(page, CARD))) break;
 
-      const cards = await page.$$eval('a[href*="/detail-offre/"]', (anchors) =>
+      const cards = await page.$$eval(CARD, (anchors) =>
         anchors.map((a) => {
           const card = a.querySelector(".card-offer");
           const meta = {};
@@ -74,9 +79,12 @@ export async function scrape({ browser, query, location, maxPages = 3, searchId,
       // Résultats triés par date décroissante : si même la plus récente de la
       // page est hors fenêtre, les suivantes le seront aussi.
       if (since && newestOnPage && newestOnPage < since) break;
+      // Même tri : une page entièrement déjà connue signifie qu'on a rattrapé
+      // le passage précédent.
+      if (allKnown(offers.slice(before), known)) break;
     }
   } finally {
-    await page.close();
+    if (!lanePage) await page.close();
   }
   return offers;
 }

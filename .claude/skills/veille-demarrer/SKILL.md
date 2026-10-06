@@ -1,5 +1,5 @@
 ---
-name: demarrer
+name: veille-demarrer
 description: Onboarding de Veille Emploi — vérifie l'installation, crée le dashboard d'un nouveau profil, pré-remplit le profil depuis un CV ou un export LinkedIn, définit les objectifs (stage, alternance, CDI…) et les métiers visés, puis lance le premier scraping. Utiliser à la première utilisation, quand l'utilisateur demande par où commencer ou comment utiliser l'outil, ou veut créer un nouveau profil de recherche.
 ---
 
@@ -7,42 +7,49 @@ description: Onboarding de Veille Emploi — vérifie l'installation, crée le d
 
 But : qu'en une quinzaine de minutes l'utilisateur ait un dashboard à son nom,
 un profil exploitable, des recherches configurées et une première vague
-d'offres classées. Lis d'abord `${CLAUDE_PLUGIN_ROOT}/docs/CONTEXTE.md` (règles
-communes, profil actif) et garde `${CLAUDE_PLUGIN_ROOT}/docs/SCHEMA.md` sous la
+d'offres classées. Lis d'abord `${VEILLE_ROOT}/docs/CONTEXTE.md` (règles
+communes, profil actif) et garde `${VEILLE_ROOT}/docs/SCHEMA.md` sous la
 main.
 
 Ton : accueillant et concret, en français, tutoiement. Annonce les étapes au
 départ (installation → profil → objectifs → premier scraping) et dis à chaque
 fois où on en est. L'utilisateur peut s'arrêter à tout moment : tout ce qui est
-validé est enregistré aussitôt, `/veille:demarrer` reprend là où on s'est
+validé est enregistré aussitôt, `/veille-demarrer` reprend là où on s'est
 arrêté.
 
 ## 1. Vérifier l'installation
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/scripts/setup.mjs"
+node "${VEILLE_ROOT}/scripts/setup.mjs"
 ```
 
 - `node.ok` faux : Node 18 ou plus est requis. Explique comment l'installer
   (https://nodejs.org, version LTS) et arrête-toi.
-- `deps` faux : lance `node "${CLAUDE_PLUGIN_ROOT}/scripts/setup.mjs" --install-deps`.
+- `update.available` vrai : une version plus récente (`update.latest`) est
+  publiée. Dis-le en une ligne : relancer l'installeur (le même fichier
+  qu'à l'installation, ou téléchargé sur `update.releasesUrl`), puis redémarrer
+  Claude Code ; les profils et les données ne bougent pas. Ne bloque pas
+  l'onboarding pour autant. `update.withdrawn` vrai : la version installée
+  a été retirée ; même conseil, plus pressant. `update.error` : n'en parle
+  pas, la vérification est facultative.
+- `deps` faux : lance `node "${VEILLE_ROOT}/scripts/setup.mjs" --install-deps`.
 - `chromium` faux : demande (`AskUserQuestion`) s'il faut l'installer
   maintenant — un navigateur sans interface d'environ 150 Mo, téléchargé une
   fois par machine, qui débloque Indeed, Météojob, l'APEC et l'export PDF des
   CV. Sans lui, LinkedIn et Hellowork fonctionnent quand même. Si oui :
-  `node "${CLAUDE_PLUGIN_ROOT}/scripts/setup.mjs" --install-browser` (une à deux
+  `node "${VEILLE_ROOT}/scripts/setup.mjs" --install-browser` (une à deux
   minutes).
 
 **Profils existants** (`profiles` non vide) : demande si l'on crée un nouveau
 profil — pour une autre recherche, ou pour quelqu'un d'autre — ou si l'on
 continue avec un profil existant. Dans le second cas, montre la liste, oriente
-vers `/veille:scrape`, `/veille:profil` ou `/veille:profils`, et arrête-toi.
+vers `/veille-scrape`, `/veille-profil` ou `/veille-profils`, et arrête-toi.
 
 **Aucun profil local, mais peut-être des dashboards sur le compte** (nouvelle
 machine) : `Artifact` `action: "list"` et cherche des artefacts intitulés
 « Veille Emploi ». S'il y en a, propose de les rebrancher plutôt que d'en créer
 un nouveau — suis alors la section « Rebrancher » de
-`${CLAUDE_PLUGIN_ROOT}/skills/profils/SKILL.md`.
+`${VEILLE_ROOT}/skills/profils/SKILL.md`.
 
 ## 2. Créer le dashboard du profil
 
@@ -55,7 +62,7 @@ celui-ci : « Camille — alternance »). Déduis-en :
 
 Publie le dashboard :
 
-1. Copie `${CLAUDE_PLUGIN_ROOT}/dashboard/index.html` dans ton dossier
+1. Copie `${VEILLE_ROOT}/dashboard/index.html` dans ton dossier
    scratchpad sous `veille-<id>.html`, en remplaçant
    `<title>Veille Emploi</title>` par `<title>Veille Emploi · <label></title>`.
    Ne change rien d'autre : le dashboard lit tout depuis sa base.
@@ -66,8 +73,8 @@ Publie le dashboard :
 3. Enregistre le profil localement :
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/scripts/veille-config.mjs" add --id <id> --label "<label>" --url <URL>
-node "${CLAUDE_PLUGIN_ROOT}/scripts/veille-config.mjs" set --dashboard-hash <dashboardHash de l'étape 1>
+node "${VEILLE_ROOT}/scripts/veille-config.mjs" add --id <id> --label "<label>" --url <URL>
+node "${VEILLE_ROOT}/scripts/veille-config.mjs" set --dashboard-hash <dashboardHash de l'étape 1>
 ```
 
 Le premier imprime le `workspace` (`<W>`), le dossier où arriveront les CV —
@@ -86,7 +93,7 @@ elle est derrière une connexion.
 
 Lis les documents fournis — un PDF ou un texte directement avec `Read` ; pour
 un DOCX, extrais-en le texte, ou demande-le en PDF — et extrais, selon
-`${CLAUDE_PLUGIN_ROOT}/docs/SCHEMA.md` :
+`${VEILLE_ROOT}/docs/SCHEMA.md` :
 
 - `profile/identity` — nom, intitulé, ville, langues, email et téléphone
   **seulement s'ils figurent dans le document** ;
@@ -127,7 +134,7 @@ Trois questions, avec `AskUserQuestion` quand les options s'y prêtent :
 Complète `profile/aspirations` avec ces réponses (contrats, postes, lieux,
 disponibilité, rythme), puis construis une recherche `searches/<id>` par métier
 en suivant la section « Configurer les recherches » de
-`${CLAUDE_PLUGIN_ROOT}/skills/profil/SKILL.md` : `label`, `code`, `queries`
+`${VEILLE_ROOT}/skills/profil/SKILL.md` : `label`, `code`, `queries`
 déclinées par contrat, `locations`, `contracts`, `excludeKeywords`,
 `positioning`, et les valeurs initiales qu'elle donne.
 
@@ -138,7 +145,7 @@ ce qui suit.
 ## 5. Premier scraping
 
 Annonce qu'il prend quelques minutes, puis déroule entièrement
-`${CLAUDE_PLUGIN_ROOT}/skills/scrape/SKILL.md` pour toutes les recherches
+`${VEILLE_ROOT}/skills/scrape/SKILL.md` pour toutes les recherches
 actives (lis-la, ne la résume pas de mémoire). Si Chromium n'est pas installé,
 les sources navigateur apparaîtront en échec : c'est attendu, dis-le
 simplement.
@@ -152,9 +159,16 @@ l'épingler dans la barre latérale de claude.ai (`action: "pin"` sur un oui).
 Termine par trois prochaines étapes, pas plus :
 
 - **Trier les offres** dans le dashboard : « Postulé » ou « Écarter » ;
-- **`/veille:profil`** pour compléter les expériences au format STAR — cite les
+- **`/veille-profil`** pour compléter les expériences au format STAR — cite les
   manques relevés à l'étape 3 : c'est ce qui rend les CV adaptés percutants ;
-- **`/veille:cv <référence>`** devant une offre « Cible ».
+- **`/veille-cv <référence>`** devant une offre « Cible ».
 
-Rappelle qu'il n'y a pas de tâche planifiée : relancer `/veille:scrape` tous les
+Rappelle qu'il n'y a pas de tâche planifiée : relancer `/veille-scrape` tous les
 deux ou trois jours suffit, chaque passage repart du précédent.
+
+En une phrase, si `hunterKey` vaut faux dans le rapport de l'étape 1 : l'option
+`/veille-contacts` (emails RH, bouton « Contacts RH » du dashboard) demande une
+clé Hunter.io gratuite et personnelle (50 recherches par mois seulement), à
+coller ici quand il voudra s'en servir, ou à enregistrer en relançant
+l'installeur. Ne la réclame pas : c'est une option. S'il la colle, suis
+« Clé collée dans la conversation » dans `${VEILLE_ROOT}/skills/contacts/SKILL.md`.

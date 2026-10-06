@@ -1,0 +1,54 @@
+# Publishes a GitHub Release when a version tag is pushed (`npm version patch`
+# does both). The installers download its assets: a tag with a dash
+# (v1.2.0-beta.1) becomes a pre-release, which `releases/latest` never serves.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Tag must match package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Le tag $GITHUB_REF_NAME ne correspond pas à package.json ($version)."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+      - name: Build the zip and the installers
+        run: node scripts/package.mjs
+
+      - name: Check the checksum
+        run: cd dist && sha256sum -c veille-emploi.zip.sha256
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags="--generate-notes"
+          case "$GITHUB_REF_NAME" in
+            *-*) flags="$flags --prerelease" ;;
+            *) flags="$flags --latest" ;;
+          esac
+          gh release create "$GITHUB_REF_NAME" \
+            dist/veille-emploi.zip dist/veille-emploi.zip.sha256 \
+            dist/Installer.cmd dist/Installer-mac.zip \
+            --title "Veille Emploi $GITHUB_REF_NAME" $flags

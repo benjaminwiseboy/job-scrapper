@@ -1,6 +1,6 @@
 # Règles de rédaction d'un CV
 
-Référence appliquée par `/veille:cv`. Deux catégories, volontairement séparées :
+Référence appliquée par `/veille-cv`. Deux catégories, volontairement séparées :
 ce qui est **mesuré** par une étude identifiable, et ce qui relève de la
 **convention de métier** — utile, mais sans preuve chiffrée. Beaucoup d'articles
 « CV 2026 » sont du contenu marketing d'éditeurs de CV et avancent des chiffres

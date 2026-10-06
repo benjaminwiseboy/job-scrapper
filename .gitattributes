@@ -1,0 +1,5 @@
+# The installers are built on Linux by the release workflow: pin their line
+# endings so cmd.exe and sh both parse them.
+*.cmd     text eol=crlf
+*.command text eol=lf
+*.sh      text eol=lf

@@ -111,6 +111,14 @@ export function schoolAd(offer) {
   return ECOLE_ANNONCEUR.test(slug(offer.company)) || ECOLE_TITRE.test(slug(offer.title));
 }
 
+/**
+ * True when every offer of a results page is already in the base. On a source
+ * sorted by date, the next pages can only hold older, known offers too.
+ */
+export function allKnown(pageOffers, known) {
+  return Boolean(known?.size) && pageOffers.length > 0 && pageOffers.every((o) => known.has(o.docId));
+}
+
 export function cleanText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }

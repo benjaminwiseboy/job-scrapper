@@ -1,7 +1,7 @@
-// Environment check for the plugin, and the SessionStart hook.
+// Environment check for the app, and a session-start notice.
 //
-//   node scripts/setup.mjs                    status as JSON (node, deps, Chromium, profiles)
-//   node scripts/setup.mjs --install-deps     npm install in the plugin root, when node_modules is missing
+//   node scripts/setup.mjs                    status as JSON (version and updates, node, deps, Chromium, profiles)
+//   node scripts/setup.mjs --install-deps     npm install in the app root, when node_modules is missing
 //   node scripts/setup.mjs --install-browser  downloads Playwright's Chromium (~150 MB, once per machine)
 //   node scripts/setup.mjs --hook             SessionStart: prints a nudge only when something needs attention
 //
@@ -12,7 +12,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { CONFIG_PATH, loadConfig } from "./lib/config.mjs";
+import { CONFIG_PATH, getSecret, loadConfig } from "./lib/config.mjs";
+import { appVersion, compareVersions, latestRelease, releaseRepo } from "./lib/version.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const arg = process.argv[2];
@@ -56,12 +57,28 @@ async function status() {
     deps = true;
     chromium = existsSync(c.executablePath()) || existsSync("/opt/pw-browsers/chromium");
   } catch {}
+  const version = appVersion(ROOT);
+  const repo = releaseRepo(ROOT);
+  const { latest, error } = await latestRelease(repo);
   return {
-    pluginRoot: ROOT,
+    appRoot: ROOT,
+    version,
+    // available: a newer release exists. withdrawn: the installed one is newer
+    // than the latest release, so it was pulled (or is a pre-release). Either
+    // way the user re-runs the installer.
+    update: {
+      latest,
+      available: Boolean(latest && version && compareVersions(latest, version) > 0),
+      withdrawn: Boolean(latest && version && compareVersions(latest, version) < 0),
+      releasesUrl: repo ? `https://github.com/${repo}/releases/latest` : null,
+      ...(error && { error }),
+    },
     node: { version: process.versions.node, ok: Number(process.versions.node.split(".")[0]) >= 18 },
     deps,
     chromium,
     configPath: CONFIG_PATH,
+    // Optional: only /veille-contacts needs it, and each user brings their own.
+    hunterKey: Boolean(getSecret("hunter")),
     active: config.active,
     dashboardHash: hash,
     profiles: Object.entries(config.profiles).map(([id, p]) => ({
@@ -80,9 +97,9 @@ function hook() {
   const lines = [];
   if (!ids.length) {
     lines.push(
-      "[Veille Emploi] Le plugin est installé mais aucun profil n'est configuré. " +
+      "[Veille Emploi] Veille Emploi est installé mais aucun profil n'est configuré. " +
         "Si l'utilisateur parle de recherche d'emploi, de stage, d'alternance, de CV, ou demande par où commencer, " +
-        "propose-lui /veille:demarrer (onboarding guidé, une quinzaine de minutes)."
+        "propose-lui /veille-demarrer (onboarding guidé, une quinzaine de minutes)."
     );
   } else {
     const hash = dashboardHash();
@@ -90,13 +107,13 @@ function hook() {
     if (stale.length) {
       lines.push(
         `[Veille Emploi] Une nouvelle version du dashboard est disponible pour : ${stale.join(", ")}. ` +
-          "À l'occasion, propose /veille:profils pour le republier (les données ne bougent pas)."
+          "À l'occasion, propose /veille-profils pour le republier (les données ne bougent pas)."
       );
     }
   }
   if (!existsSync(join(ROOT, "node_modules", "playwright"))) {
     lines.push(
-      "[Veille Emploi] Les dépendances du plugin ne sont pas installées : avant un scraping ou un CV, " +
+      "[Veille Emploi] Les dépendances de Veille Emploi ne sont pas installées : avant un scraping ou un CV, " +
         `lance \`node "${join(ROOT, "scripts", "setup.mjs")}" --install-deps\`.`
     );
   }

@@ -21,19 +21,21 @@ purge.
 | `contracts` | string[] | Contrats visés : `stage` · `alternance` · `cdi` · `cdd` · `interim` · `freelance` · `vie` · `fonctionnaire`. Filtre dur : `scrape.mjs` écarte toute offre dont le contrat est connu et absent de la liste ; vide = aucun filtre |
 | `excludeKeywords` | string[] | Écarte une offre si son titre contient l'un d'eux |
 | `positioning` | string | Angle de réécriture du CV pour cet objectif |
-| `active` | bool | Incluse dans un `/veille:scrape` sans argument |
+| `active` | bool | Incluse dans un `/veille-scrape` sans argument |
 | `nextRef` | number | Prochain numéro de référence à attribuer |
 | `maxDays` | number | Plafond de la fenêtre de scraping (7 par défaut) |
 | `sources` | map | Par source : `{enabled, lastScrapeAt, lastCount}` |
 
 ## `offers/<source>_<externalId>` — une offre
 
-Produit par `scripts/scrape.mjs`, enrichi par `scripts/prepare-db.mjs` (`ref`,
-`searchId`), puis classé.
+Produit par `scripts/scrape.mjs`, classé par Claude, puis écrit par
+`scripts/prepare-db.mjs` (`ref`, `searchId`, `tier`, `rationale`) en une seule
+écriture. Une offre classée `hors` n'est jamais écrite : elle ne figure que
+dans `seen/<searchId>`.
 
 | Champ | Rôle |
 |---|---|
-| `ref` | Référence lisible : `ACH-042`. C'est ce que l'utilisateur fournit à `/veille:cv` |
+| `ref` | Référence lisible : `ACH-042`. C'est ce que l'utilisateur fournit à `/veille-cv` |
 | `source` | `linkedin` · `indeed` · `meteojob` · `apec` |
 | `externalId` | Identifiant chez la source |
 | `title`, `company`, `location`, `contract`, `salary` | Champs extraits (`contract` = libellé affiché, tel que donné par la source) |
@@ -45,15 +47,16 @@ Produit par `scripts/scrape.mjs`, enrichi par `scripts/prepare-db.mjs` (`ref`,
 | `alsoOn` | Autres sources où la même offre a été vue |
 | `searchId` | Recherche à laquelle l'offre appartient |
 | `query` | Requête qui l'a ramenée |
-| `tier` | `cible` · `possible` · `hors` · `null` (non classée) |
+| `tier` | `cible` · `possible` · `null` (non classée). `hors` n'apparaît plus que sur des offres écrites avant que le classement précède l'écriture ; la purge les supprime |
 | `rationale` | Une phrase : ce qui correspond, ce qui manque |
 | `status` | `new` · `seen` · `applied` · `answered` · `rejected` |
 | `statusAt` | Horodatage du dernier changement de statut |
 | `outcome` | `refused` quand l'employeur a répondu non, absent sinon |
 | `outcomeAt` | Date du mail de refus |
 | `scrapedAt` | Date de collecte |
-| `closed` | `true` quand l'annonce n'accepte plus de candidatures, constaté par `scripts/check-open.mjs` (LinkedIn, Hellowork) ; absent sinon. Masquée du dashboard sauf candidature envoyée |
+| `closed` | `true` quand l'annonce n'accepte plus de candidatures, constaté par `scripts/check-open.mjs` (LinkedIn, Hellowork) ; absent sinon. Seules les offres protégées (candidature, CV) sont marquées ainsi, les autres sont supprimées. Masquée du dashboard sauf candidature envoyée |
 | `closedAt`, `closedReason` | Date du constat ; `candidatures closes` ou `offre retirée` |
+| `contacts` | Écrit par `/veille-contacts` (Hunter.io) : `{searchedAt, domain, pattern, agency, strategy, emails: [{email, name, position, type, confidence, verification, linkedin}]}`. `strategy` vaut `hr`, `generic`, `executive` ou `null` (rien trouvé — `emails` est alors vide, et la recherche n'est pas refaite avant 30 jours). `type` : `personal` ou `generic`. `agency` : l'offre vient d'un cabinet ou d'une agence d'intérim. Absent tant qu'aucune recherche n'a été faite |
 
 Les mises à jour automatiques ne font jamais reculer le statut : `new` → `seen`
 → `applied` → `answered`.
@@ -62,27 +65,35 @@ l'utilisateur, que la purge conserve dans `dismissed`. Un refus de l'employeur
 n'est donc pas un statut mais un `outcome` : la candidature reste `applied` ou
 `answered`, comptée dans les KPIs et protégée de la purge.
 
-## `profile/<section>` — le profil, alimenté par `/veille:profil`
+## `profile/<section>` — le profil, alimenté par `/veille-profil`
 
 - `profile/identity` : `{name, headline, location, mobility, email, phone, languages[]}`
 - `profile/formation` : `{items: [{degree, school, dates, focus, highlights[]}]}`
 - `profile/experiences` : `{items: [{role, company, sector, size, dates, situation, task, action, result, skills[]}]}` — le bloc STAR
 - `profile/skills` : `{outils: [], methodes: [], langues: [], certifications: []}`
-- `profile/aspirations` : `{secteurs, taille, valeurs, mobilite, remuneration, refus, contrats[], postes[], lieux[], disponibilite, rythme}` — les cinq derniers posés par `/veille:demarrer`
+- `profile/aspirations` : `{secteurs, taille, valeurs, mobilite, remuneration, refus, contrats[], postes[], lieux[], disponibilite, rythme}` — les cinq derniers posés par `/veille-demarrer`
 
-## `dismissed/<searchId>` — les offres écartées à la main
+## `seen/<searchId>` — l'index des offres déjà vues
 
-`{ids: ["indeed_...", ...], updatedAt}` — un seul document par recherche, pour ne
-pas consommer le plafond de 5000.
+`{ids: ["linkedin_...", ...], screened: ["indeed_...", ...], updatedAt}` — un
+seul document par recherche.
 
-Une offre écartée reste d'abord en base, donc le dédoublonnage suffit. Mais la
-purge finit par la supprimer, et elle sort alors des identifiants connus : rien
-n'empêcherait plus le scraping suivant de la réécrire comme une nouveauté. Ce
-document fait donc survivre la décision à la suppression de la fiche. Il est
-alimenté par `/veille:purge` et lu par `/veille:scrape`.
+- `ids` : toutes les offres jamais écrites pour cette recherche, plus celles
+  écartées comme hors cible. Le scraping les écarte avant toute requête
+  supplémentaire : c'est ce qui évite de relire la base entière à chaque
+  passage, et ce qui empêche une offre purgée de revenir.
+- `screened` : le sous-ensemble jamais écrit en base (classé `hors`), que
+  `check-open.mjs` n'a pas à vérifier.
 
-Seules les offres en `status: "rejected"` y entrent — une offre classée `hors`
-par la machine n'est pas une décision humaine et peut être reclassée.
+Écrit par `prepare-db.mjs` à chaque scraping (15 000 identifiants au plus, les
+plus récents). Amorcé au premier passage depuis les offres en base.
+
+## `dismissed/<searchId>` — les offres écartées à la main (historique)
+
+`{ids: ["indeed_...", ...], updatedAt}`. Gardait la trace des offres
+`rejected` purgées, pour qu'elles ne reviennent pas. `seen` couvre désormais ce
+besoin pour toute offre écrite ; ce document n'est plus alimenté, mais reste lu
+par `/veille-scrape` pour les décisions qui le précèdent.
 
 ## `events/<id>` — salons et job datings
 
@@ -93,7 +104,7 @@ par la machine n'est pas une décision humaine et peut être reclassée.
 `{offerRef, offerDocId, offerTitle, company, searchId, createdAt, …}` puis, selon
 l'origine :
 
-- **`/veille:cv`** : `filePath` (HTML) et `pdfPath`, chemins absolus locaux
+- **`/veille-cv`** : `filePath` (HTML) et `pdfPath`, chemins absolus locaux
   produits par `scripts/cv-pdf.mjs`.
 - **onglet Candidater** (`origin: "dashboard"`) : le contenu lui-même, d'où le
   dashboard régénère les PDF à la demande —
@@ -108,6 +119,6 @@ l'origine :
 ## `mailsync/state` — suivi de la lecture des mails
 
 `{lastRunAt, processed: ["<messageId Gmail>", ...]}` — alimenté par
-`/veille:mail`. `lastRunAt` borne la recherche suivante ; `processed` évite de
+`/veille-mail`. `lastRunAt` borne la recherche suivante ; `processed` évite de
 retraiter un mail déjà appliqué (1000 identifiants au plus, les plus récents).
 Aucun contenu de mail n'est stocké.

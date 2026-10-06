@@ -33,9 +33,7 @@ export async function scrape({ query, location, maxPages = 3, searchId, since })
     });
     if (recency) params.set("f_TPR", `r${recency}`);
 
-    const res = await fetch(`${ENDPOINT}?${params}`, {
-      headers: { "User-Agent": UA, "Accept-Language": "fr-FR,fr;q=0.9" },
-    });
+    const res = await getWithRetry(`${ENDPOINT}?${params}`);
     if (!res.ok) {
       if (page === 0) throw new Error(`LinkedIn HTTP ${res.status}`);
       break;
@@ -82,9 +80,7 @@ export async function scrape({ query, location, maxPages = 3, searchId, since })
 // ("Stage") plus the description, where "CDI" or "alternance" is usually
 // written out. Returns "" on failure — the offer then stays "unknown".
 export async function contractText(offer) {
-  const res = await fetch(`https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${offer.externalId}`, {
-    headers: { "User-Agent": UA, "Accept-Language": "fr-FR,fr;q=0.9" },
-  });
+  const res = await getWithRetry(`https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${offer.externalId}`);
   if (!res.ok) return "";
   const html = await res.text();
   const criteria = [...html.matchAll(/description__job-criteria-subheader[^>]*>\s*([\s\S]*?)\s*<\/h3>\s*<span[^>]*>\s*([\s\S]*?)\s*<\/span>/g)];
@@ -106,6 +102,17 @@ export async function checkOpen(offer) {
   const html = await res.text();
   if (/closed-job__flavor--closed/.test(html)) return { state: "closed", reason: "candidatures closes" };
   return /top-card-layout__title|topcard__title/.test(html) ? { state: "open" } : { state: "unknown", status: res.status };
+}
+
+// LinkedIn answers 429 as soon as requests come a little too close together.
+// Backing off and retrying twice is enough to get through a burst.
+async function getWithRetry(url, retries = 2) {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(url, { headers: { "User-Agent": UA, "Accept-Language": "fr-FR,fr;q=0.9" } });
+    if (res.status !== 429 || attempt >= retries) return res;
+    res.body?.cancel();
+    await new Promise((resolve) => setTimeout(resolve, 2500 * (attempt + 1)));
+  }
 }
 
 function stripTags(value) {

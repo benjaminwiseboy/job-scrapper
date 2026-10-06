@@ -1,5 +1,5 @@
 ---
-name: purge
+name: veille-purge
 description: Nettoie les anciennes offres non retenues de la base du dashboard « Veille Emploi » pour rester sous le plafond de documents. Utiliser quand l'utilisateur veut purger, nettoyer ou archiver sa base d'offres.
 ---
 
@@ -9,14 +9,14 @@ La base d'un artefact plafonne à **5000 documents**. À une centaine d'offres p
 passage, on sature en quelques mois : la purge n'est pas un luxe, c'est ce qui
 empêche le système de mourir silencieusement.
 
-`/veille:scrape` l'applique automatiquement à chaque passage. Cette commande
+`/veille-scrape` l'applique automatiquement à chaque passage. Cette commande
 existe pour la lancer à la main ou pour un nettoyage plus agressif.
 
-**Profil actif** : `node "${CLAUDE_PLUGIN_ROOT}/scripts/veille-config.mjs"` donne
+**Profil actif** : `node "${VEILLE_ROOT}/scripts/veille-config.mjs"` donne
 `artifactUrl` (notée URL ci-dessous) et `workspace` (noté `<W>`) ; code de sortie
-3 = aucun profil, propose `/veille:demarrer` et arrête-toi. Règles communes :
-`${CLAUDE_PLUGIN_ROOT}/docs/CONTEXTE.md`. Schéma :
-`${CLAUDE_PLUGIN_ROOT}/docs/SCHEMA.md`.
+3 = aucun profil, propose `/veille-demarrer` et arrête-toi. Règles communes :
+`${VEILLE_ROOT}/docs/CONTEXTE.md`. Schéma :
+`${VEILLE_ROOT}/docs/SCHEMA.md`.
 
 ## Politique
 
@@ -32,8 +32,8 @@ Ancienneté mesurée sur `scrapedAt` (ou `postedAt` s'il est plus récent).
 
 | Cas | Seuil |
 |---|---|
-| `closed` = `true` (offre pourvue ou retirée) | dès la purge suivante |
-| `tier` = `hors` | 2 jours |
+| `closed` = `true`, ou trouvée fermée par `check-open.mjs` | immédiatement |
+| `tier` = `hors` | immédiatement |
 | `tier` = `null` (jamais classée) | 21 jours |
 | `status` = `rejected` | 21 jours |
 | `tier` = `possible`, `status` ∈ {`new`, `seen`} | 45 jours |
@@ -42,37 +42,42 @@ Ancienneté mesurée sur `scrapedAt` (ou `postedAt` s'il est plus récent).
 Une cible qu'on n'a pas touchée en deux mois n'est plus une cible : l'annonce
 est de toute façon expirée.
 
-Une offre fermée ne revient pas au scraping : les sources ne listent plus une
-annonce qui n'accepte plus de candidatures. La supprimer ne risque donc pas de
-la faire réapparaître comme une nouveauté.
+Les offres `hors` ne sont plus écrites en base depuis que `/veille-scrape`
+classe avant d'écrire ; celles qui restent datent d'avant et partent sans
+délai.
 
-Le délai court des offres `hors` est délibéré : elles ne servent qu'à vérifier
-le classement du dernier passage, et au-delà elles noient le tableau. Une offre
-purgée sans date exploitable (Indeed) peut revenir au scraping suivant ; elle
-est alors reclassée, puis repurgée.
+Une offre supprimée ne revient pas au scraping : son identifiant reste dans
+l'index `seen/<searchId>`, que le scraping consulte avant d'écrire quoi que ce
+soit — y compris pour Indeed, dont les offres n'ont pas de date exploitable.
+Une offre écartée à la main (`rejected`) est donc protégée de tout retour sans
+rien faire de plus ; le document `dismissed/<searchId>` reste lu pour les
+décisions antérieures à `seen`, mais n'a plus besoin d'être alimenté.
 
 ## Procédure
 
-1. Lis toute la collection : `ArtifactData` `query` sur `offers` avec
-   `out_dir <W>/.veille-tmp/purge` pour ne pas charger le contenu dans la
-   conversation, puis inspecte les fichiers.
-2. Lis `cvs` pour constituer la liste des `offerDocId` protégés.
-3. Établis la liste à supprimer selon la politique ci-dessus.
-4. **Avant de supprimer, conserve la trace des offres écartées à la main.**
-   Pour toute offre en `status: "rejected"` sur le point d'être purgée, ajoute
-   son `doc_id` au document `dismissed/<searchId>` (champ `ids`, un tableau).
-   Lis-le d'abord, fusionne, réécris avec `if_version`.
+Ne relis pas toute la collection : les lectures sont ciblées, et toutes
+lancées dans le même message, avec `out_dir`.
 
-   Sans cela, l'offre sort de la base, donc de la liste des identifiants connus,
-   et le scraping suivant la réécrit comme une nouveauté : ta décision de
-   l'écarter serait perdue. C'est surtout vrai pour Indeed, dont les offres n'ont
-   pas de date exploitable et ne sont donc jamais filtrées par la fenêtre.
+1. `ArtifactData` :
+   - `query` sur `offers`, `where` `scrapedAt < <maintenant − 21 jours, ISO>`,
+     `limit` 1000 → `<W>/.veille-tmp/purge/old` ;
+   - `query` sur `offers`, `where` `tier == hors`, `limit` 1000 →
+     `<W>/.veille-tmp/purge/hors` ;
+   - `query` sur `offers`, `where` `closed == true`, `limit` 1000 →
+     `<W>/.veille-tmp/purge/closed` ;
+   - `list` sur `cvs` → `<W>/.veille-tmp`.
+2. Établis le plan :
 
-   Ne fais ce report que pour `rejected`. Une offre classée `hors` par la machine
-   n'est pas une décision humaine : si elle revient, elle sera reclassée.
-5. Supprime par lots de 50 (`op: "delete"`), en épinglant `if_version` — la
-   version figure dans chaque fichier lu.
-6. Nettoie `<W>/.veille-tmp/`.
+   ```
+   node "${VEILLE_ROOT}/scripts/purge-plan.mjs"      --offers "<W>/.veille-tmp/purge/old" --offers "<W>/.veille-tmp/purge/hors"      --offers "<W>/.veille-tmp/purge/closed" --cvs "<W>/.veille-tmp/cvs"      --cache "<W>/.veille-cache/checks.json"
+   ```
+
+   Dans `/veille-scrape`, ajoute `--closed` avec le rapport de `check-open.mjs`.
+3. Supprime par lots de 50 (`op: "delete"`), tous dans le même message, en
+   épinglant `if_version` — la version que le listing de lecture affiche à côté
+   de chaque doc_id. Les éventuels `markClosed` deviennent des `op: "update"`
+   `{closed: true, closedAt, closedReason}`.
+4. Nettoie `<W>/.veille-tmp/` (pas `<W>/.veille-cache/`).
 
 ## Rendre compte
 
@@ -80,6 +85,6 @@ Le nombre supprimé par motif, le nombre conservé, et le total de documents
 restants rapporté au plafond. Si on dépasse 4000 documents, dis-le clairement et
 propose de durcir les seuils : c'est le moment d'agir, pas à 4900.
 
-Quand cette commande tourne dans le cadre d'un `/veille:scrape`, résume-la en une
+Quand cette commande tourne dans le cadre d'un `/veille-scrape`, résume-la en une
 seule ligne dans le rapport final — pas besoin d'un détail complet à chaque
 passage.

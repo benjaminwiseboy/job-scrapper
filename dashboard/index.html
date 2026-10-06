@@ -209,6 +209,15 @@
   .flag.refused { color: var(--danger); }
   .flag.closed { color: var(--muted); }
   .why { grid-column: 2; font-size: 13px; color: var(--muted); margin: 5px 0 0; padding-left: 9px; border-left: 2px solid var(--line-strong); }
+  .contacts { grid-column: 2; margin: 6px 0 0; font-size: 12.5px; }
+  .contacts summary { cursor: pointer; color: var(--muted); width: max-content; }
+  .contacts summary:hover { color: var(--ink); }
+  .contacts ul { list-style: none; margin: 6px 0 0; padding: 0 0 0 9px; display: grid; gap: 5px; border-left: 2px solid var(--accent-soft); }
+  .contacts li { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; min-width: 0; }
+  .contacts a.mail { color: var(--accent); font: 500 12px/1.3 var(--mono); overflow-wrap: anywhere; }
+  .contacts .who { color: var(--muted); }
+  .contacts .conf { font: 500 10.5px/1 var(--mono); color: var(--faint); }
+  .contacts .hint { margin: 5px 0 0; color: var(--faint); font-size: 12px; }
 
   .acts { display: flex; gap: 5px; grid-row: span 2; }
   .act {
@@ -402,7 +411,7 @@
   @media (max-width: 620px) {
     .row { grid-template-columns: 62px 1fr; }
     .acts { grid-row: auto; grid-column: 2; margin-top: 7px; }
-    .why { grid-column: 1 / -1; }
+    .why, .contacts { grid-column: 1 / -1; }
     .ev { grid-template-columns: 54px 1fr; }
     .star > div { grid-template-columns: 1fr; gap: 2px; }
   }
@@ -417,7 +426,7 @@
     <div class="hd-right">
       <div class="refresh">
         <span class="msg" id="refreshMsg" role="status"></span>
-        <button class="btn ghost sm" id="refreshBtn" title="Demande à Claude Code de lancer /veille:scrape">Rafraîchir les offres</button>
+        <button class="btn ghost sm" id="refreshBtn" title="Demande à Claude Code de lancer /veille-scrape">Rafraîchir les offres</button>
       </div>
       <div class="searches" id="searchChips"></div>
     </div>
@@ -436,13 +445,13 @@
 
   <section role="tabpanel" id="p-offres" aria-labelledby="t-offres">
     <dl class="kpis" id="kpis"></dl>
-    <div class="filters" data-filters></div>
+    <div class="filters" data-filters="cible"></div>
     <div id="offersList"></div>
   </section>
 
   <section role="tabpanel" id="p-autres" aria-labelledby="t-autres" hidden>
     <p class="note">Les offres que le classement n'a pas retenues comme cibles : correspondance partielle, pas encore classées, ou hors cible. À parcourir quand les cibles sont traitées.</p>
-    <div class="filters" data-filters></div>
+    <div class="filters" data-filters="autres"></div>
     <div id="autresList"></div>
   </section>
 
@@ -527,7 +536,7 @@
           </div>
           <div class="card">
             <h3>Claude Code, c'est le moteur</h3>
-            <p>Les commandes <code class="cmd">/veille:…</code> se lancent dans Claude Code, sur ton ordinateur : scraping, classement, CV. Rien ne tourne en arrière-plan, tout part d'une commande.</p>
+            <p>Les commandes <code class="cmd">/veille-…</code> se lancent dans Claude Code, sur ton ordinateur : scraping, classement, CV. Rien ne tourne en arrière-plan, tout part d'une commande.</p>
           </div>
         </div>
       </div>
@@ -536,12 +545,12 @@
         <h2>Le cycle d'une recherche</h2>
         <div class="card">
           <ol class="steps">
-            <li><h3>Configurer <code class="cmd">/veille:demarrer</code></h3><p>Une fois, au début. Ton CV ou ton export LinkedIn pré-remplit le profil, puis tu choisis les contrats (stage, alternance, CDI…) et les métiers visés. Chaque métier devient une recherche.</p></li>
-            <li><h3>Collecter <code class="cmd">/veille:scrape</code></h3><p>Tous les deux ou trois jours. Chaque passage interroge LinkedIn, Indeed, Hellowork, Météojob et l'APEC depuis le précédent, retire les doublons et classe les nouveautés.</p></li>
+            <li><h3>Configurer <code class="cmd">/veille-demarrer</code></h3><p>Une fois, au début. Ton CV ou ton export LinkedIn pré-remplit le profil, puis tu choisis les contrats (stage, alternance, CDI…) et les métiers visés. Chaque métier devient une recherche.</p></li>
+            <li><h3>Collecter <code class="cmd">/veille-scrape</code></h3><p>Tous les deux ou trois jours. Chaque passage interroge LinkedIn, Indeed, Hellowork, Météojob et l'APEC depuis le précédent, retire les doublons et classe les nouveautés.</p></li>
             <li><h3>Trier, ici</h3><p>L'onglet Cibles ne montre que les offres qui collent à ton profil, les plus récentes en tête ; les autres attendent dans « Autres offres ». La tuile « Dernier refresh » compte ce que le dernier scraping a apporté. « Postulé » garde la trace de ta candidature, « Écarter » fait disparaître l'offre pour de bon, même aux passages suivants.</p></li>
-            <li><h3>Postuler, ici</h3><p>Le bouton « Candidater » d'une offre (ou l'onglet du même nom) : colle le texte de l'annonce, réponds à quelques questions, et Claude rédige le CV, la lettre et le mail à partir de ton profil, sans rien inventer. Les PDF se téléchargent directement et restent dans l'onglet CV. Même chose depuis Claude Code avec <code class="cmd">/veille:cv ACH-042</code>.</p></li>
-            <li><h3>Suivre les réponses <code class="cmd">/veille:mail</code></h3><p>Lit ta boîte Gmail en lecture seule et met à jour les statuts : candidature reçue, entretien, refus.</p></li>
-            <li><h3>Affiner <code class="cmd">/veille:profil</code></h3><p>Un entretien guidé qui détaille tes expériences au format STAR : situation, tâche, action, résultat chiffré. C'est ce qui rend le classement juste et les CV percutants.</p></li>
+            <li><h3>Postuler, ici</h3><p>Le bouton « Candidater » d'une offre (ou l'onglet du même nom) : colle le texte de l'annonce, réponds à quelques questions, et Claude rédige le CV, la lettre et le mail à partir de ton profil, sans rien inventer. Les PDF se téléchargent directement et restent dans l'onglet CV. Même chose depuis Claude Code avec <code class="cmd">/veille-cv ACH-042</code>. Pour écrire directement à l'entreprise, « Contacts RH » cherche les emails du recrutement et les range sous l'offre.</p></li>
+            <li><h3>Suivre les réponses <code class="cmd">/veille-mail</code></h3><p>Lit ta boîte Gmail en lecture seule et met à jour les statuts : candidature reçue, entretien, refus.</p></li>
+            <li><h3>Affiner <code class="cmd">/veille-profil</code></h3><p>Un entretien guidé qui détaille tes expériences au format STAR : situation, tâche, action, résultat chiffré. C'est ce qui rend le classement juste et les CV percutants.</p></li>
           </ol>
         </div>
       </div>
@@ -552,8 +561,8 @@
           <dl class="legend">
             <div><dt><span class="tag cible">Cible</span></dt><dd>Bon métier, niveau accessible, lieu et contrat qui te conviennent. À traiter en premier : elles ont leur propre onglet.</dd></div>
             <div><dt><span class="tag possible">Possible</span></dt><dd>Correspondance partielle : bon métier mais contrat ou lieu imparfait, ou métier voisin. Dans l'onglet Autres offres.</dd></div>
-            <div><dt><span class="tag hors">Hors cible</span></dt><dd>Autre métier ou niveau hors de portée. Gardée un temps dans Autres offres, puis purgée. Les « alternances » publiées par des écoles pour recruter des étudiants sont écartées dès le scraping.</dd></div>
-            <div><dt><span class="tag plain">ACH-042</span></dt><dd>La référence à donner à <code class="cmd">/veille:cv</code>.</dd></div>
+            <div><dt><span class="tag hors">Hors cible</span></dt><dd>Autre métier ou niveau hors de portée. Écartée dès le scraping, sans être enregistrée : elle n'apparaît pas ici et ne reviendra pas. Les « alternances » publiées par des écoles pour recruter des étudiants sont écartées de la même façon.</dd></div>
+            <div><dt><span class="tag plain">ACH-042</span></dt><dd>La référence à donner à <code class="cmd">/veille-cv</code>.</dd></div>
             <div><dt><span class="tag plain">~ 12 sept</span></dt><dd>Le tilde signale une date approximative : le site affichait « il y a 3 jours ».</dd></div>
           </dl>
           <p style="margin:14px 0 0;font-size:13.5px;color:var(--muted)">Sous chaque offre, une phrase dit ce qui correspond à ton profil et ce qui manque. Dans chaque catégorie, les offres les plus récentes viennent en premier. À chaque scraping, les offres LinkedIn et Hellowork déjà en base sont revérifiées : celles qui n'acceptent plus de candidatures disparaissent de la liste (le filtre « Tout » les montre encore, marquées « Fermée »).</p>
@@ -563,37 +572,37 @@
       <div class="sect">
         <h2>Toutes les commandes</h2>
         <div class="card"><dl class="cmdlist">
-          <div><dt>/veille:demarrer</dt><dd>Onboarding : installation, profil, objectifs, premier scraping. Aussi pour créer un nouveau profil</dd></div>
-          <div><dt>/veille:scrape</dt><dd>Interroge les sources, classe les nouvelles offres, purge les anciennes</dd></div>
-          <div><dt>/veille:cv &lt;ref&gt;</dt><dd>Génère un CV adapté à une offre, à partir de sa référence</dd></div>
-          <div><dt>/veille:profil</dt><dd>Entretien guidé pour compléter ou corriger le profil et les recherches</dd></div>
-          <div><dt>/veille:mail</dt><dd>Met à jour les statuts depuis ta boîte mail : confirmations, entretiens, refus</dd></div>
-          <div><dt>/veille:events</dt><dd>Cherche salons, forums et job datings liés à tes recherches</dd></div>
-          <div><dt>/veille:profils</dt><dd>Liste tes profils, change de profil actif, met à jour le dashboard</dd></div>
-          <div><dt>/veille:source &lt;url&gt;</dt><dd>Teste si un site d'offres est scrapable, ou répare une source muette</dd></div>
-          <div><dt>/veille:purge</dt><dd>Nettoie les offres anciennes non retenues</dd></div>
+          <div><dt>/veille-demarrer</dt><dd>Onboarding : installation, profil, objectifs, premier scraping. Aussi pour créer un nouveau profil</dd></div>
+          <div><dt>/veille-scrape</dt><dd>Interroge les sources, classe les nouvelles offres, purge les anciennes</dd></div>
+          <div><dt>/veille-cv &lt;ref&gt;</dt><dd>Génère un CV adapté à une offre, à partir de sa référence</dd></div>
+          <div><dt>/veille-profil</dt><dd>Entretien guidé pour compléter ou corriger le profil et les recherches</dd></div>
+          <div><dt>/veille-contacts &lt;ref&gt;</dt><dd>Cherche les emails RH de l'entreprise d'une offre (Hunter.io), pour écrire directement</dd></div>
+          <div><dt>/veille-mail</dt><dd>Met à jour les statuts depuis ta boîte mail : confirmations, entretiens, refus</dd></div>
+          <div><dt>/veille-events</dt><dd>Cherche salons, forums et job datings liés à tes recherches</dd></div>
+          <div><dt>/veille-profils</dt><dd>Liste tes profils, change de profil actif, met à jour le dashboard</dd></div>
+          <div><dt>/veille-source &lt;url&gt;</dt><dd>Teste si un site d'offres est scrapable, ou répare une source muette</dd></div>
+          <div><dt>/veille-purge</dt><dd>Nettoie les offres anciennes non retenues</dd></div>
         </dl></div>
       </div>
 
       <div class="sect faq">
         <h2>Questions fréquentes</h2>
-        <details><summary>Le scraping ne ramène rien de nouveau</summary><p>Chaque passage repart du précédent : si tu relances le même jour, c'est normal. Si une source reste vide plusieurs fois, l'onglet Paramètres la marque d'un point ambre ; <code class="cmd">/veille:source</code> en trouve la cause, souvent un site qui a changé sa mise en page.</p></details>
+        <details><summary>Le scraping ne ramène rien de nouveau</summary><p>Chaque passage repart du précédent : si tu relances le même jour, c'est normal. Si une source reste vide plusieurs fois, l'onglet Paramètres la marque d'un point ambre ; <code class="cmd">/veille-source</code> en trouve la cause, souvent un site qui a changé sa mise en page.</p></details>
         <details><summary>Où sont mes CV ?</summary><p>Ceux rédigés dans l'onglet Candidater sont gardés dans le dashboard : l'onglet CV les retélécharge en PDF à tout moment. Ceux faits avec Claude Code sont sur ton ordinateur, dans le dossier de travail du profil (par défaut <code class="cmd">Documents/Veille-Emploi/&lt;profil&gt;/cv</code>) ; l'onglet CV affiche le chemin exact.</p></details>
-        <details><summary>Le bouton « Rafraîchir les offres » ne lance rien</summary><p>Le scraping tourne dans Claude Code, sur ton ordinateur. Le bouton envoie la demande à une session Claude Code ouverte qui suit ce dashboard ; s'il n'y en a pas, il copie <code class="cmd">/veille:scrape</code> pour que tu le colles dans Claude Code.</p></details>
+        <details><summary>Le bouton « Rafraîchir les offres » ne lance rien</summary><p>Le scraping tourne dans Claude Code, sur ton ordinateur. Le bouton envoie la demande à une session Claude Code ouverte qui suit ce dashboard ; s'il n'y en a pas, il copie <code class="cmd">/veille-scrape</code> pour que tu le colles dans Claude Code.</p></details>
         <details><summary>Qui paie la rédaction dans l'onglet Candidater ?</summary><p>Elle passe par ton compte Claude, comme une conversation : la première fois, claude.ai te demande l'autorisation.</p></details>
         <details><summary>Qui peut voir ce dashboard ?</summary><p>Toi seul, tant que tu ne le partages pas. Il contient ton profil complet : partage-le en connaissance de cause.</p></details>
-        <details><summary>Je cherche un stage et un CDI, ou j'aide quelqu'un d'autre</summary><p>Deux métiers différents tiennent dans un même profil, sous forme de deux recherches. Pour séparer complètement deux projets, crée un second profil avec <code class="cmd">/veille:demarrer</code> : il aura son propre dashboard. <code class="cmd">/veille:profils</code> passe de l'un à l'autre.</p></details>
-        <details><summary>J'ai changé d'ordinateur</summary><p>Tes dashboards et leurs données restent sur ton compte Claude. Réinstalle le plugin, puis lance <code class="cmd">/veille:profils</code> pour les rebrancher.</p></details>
+        <details><summary>Je cherche un stage et un CDI, ou j'aide quelqu'un d'autre</summary><p>Deux métiers différents tiennent dans un même profil, sous forme de deux recherches. Pour séparer complètement deux projets, crée un second profil avec <code class="cmd">/veille-demarrer</code> : il aura son propre dashboard. <code class="cmd">/veille-profils</code> passe de l'un à l'autre.</p></details>
+        <details><summary>Comment obtenir les emails RH d'une offre ?</summary><p>Le bouton « Contacts RH » d'une offre (ou <code class="cmd">/veille-contacts ACH-042</code>) cherche les adresses du recrutement de l'entreprise avec Hunter.io, puis les range sous l'offre. Il faut ta propre clé Hunter, gratuite : la marche à suivre pas à pas est dans l'onglet Paramètres, rubrique « Contacts RH ». Attention : 50 crédits par mois, et une recherche peut consommer un crédit sans rien donner d'utile. À garder pour les offres qui comptent.</p></details>
+        <details><summary>J'ai changé d'ordinateur</summary><p>Tes dashboards et leurs données restent sur ton compte Claude. Réinstalle Veille Emploi avec l'installeur, puis lance <code class="cmd">/veille-profils</code> pour les rebrancher.</p></details>
         <details><summary>Pourquoi pas de scraping automatique ?</summary><p>Le scraping a besoin de ton ordinateur allumé, avec Claude Code ouvert. Le lancer à la main quand tu t'assois pour chercher évite de consommer pour rien et de solliciter les sites sans raison.</p></details>
       </div>
 
       <div class="sect">
         <h2>Installer sur un autre poste</h2>
-        <p>Dans un terminal, avec Claude Code et Node.js déjà installés :</p>
-        <pre class="install">claude plugin marketplace add benjaminwiseboy/job-scrapper
-claude plugin install veille@veille-emploi</pre>
-        <p style="margin-top:10px">Autre option, avec le fichier <code class="cmd">veille-emploi.zip</code> : le dézipper, puis double-cliquer sur <code class="cmd">Installer.cmd</code> (Windows) ou <code class="cmd">Installer.command</code> (Mac). Il installe Node.js s'il manque, après avoir demandé.</p>
-        <p>Ouvre ensuite Claude Code et tape <code class="cmd">/veille:demarrer</code>.</p>
+        <p>Télécharger l'installeur sur <a href="https://github.com/benjaminwiseboy/job-scrapper/releases/latest" target="_blank" rel="noopener">la page des versions</a> : <code class="cmd">Installer.cmd</code> (Windows) ou <code class="cmd">Installer-mac.zip</code> (Mac, à dézipper), puis double-cliquer dessus. Il télécharge la dernière version et installe Node.js s'il manque, après avoir demandé. Chaque personne a son propre dashboard et, pour les contacts RH, sa propre clé Hunter.io.</p>
+        <p>Pour mettre à jour : relancer le même installeur. Les profils et les données ne bougent pas.</p>
+        <p>Ouvre ensuite Claude Code et tape <code class="cmd">/veille-demarrer</code>.</p>
       </div>
     </div>
   </section>
@@ -731,18 +740,25 @@ claude plugin install veille@veille-emploi</pre>
     return String(o.postedAt || o.scrapedAt || "");
   }
 
+  function matchesStatus(o) {
+    if (state.filterStatus === "open") return isLive(o);
+    if (state.filterStatus === "applied") return isApplied(o);
+    if (state.filterStatus === "new") return isFresh(o);
+    return true;
+  }
+
   function visibleOffers() {
     return state.offers
-      .filter((o) => {
-        if (!inScope(o)) return false;
-        if (state.filterSource !== "all" && o.source !== state.filterSource) return false;
-        if (state.filterStatus === "open" && !isLive(o)) return false;
-        if (state.filterStatus === "applied" && !isApplied(o)) return false;
-        if (state.filterStatus === "new" && !isFresh(o)) return false;
-        return true;
-      })
+      .filter((o) => inScope(o) && matchesStatus(o) && (state.filterSource === "all" || o.source === state.filterSource))
       .sort((a, b) => freshness(b).localeCompare(freshness(a)));
   }
+
+  // Which offers each list shows: the Cibles tab only targets, the other tab
+  // the rest. Source chips count within it, so they match what a click shows.
+  const LIST_TIERS = {
+    cible: (o) => o.tier === "cible",
+    autres: (o) => o.tier !== "cible",
+  };
 
   /* --------------------------------------------------------------- rendu */
 
@@ -842,10 +858,19 @@ claude plugin install veille@veille-emploi</pre>
     const scoped = state.offers.filter(inScope);
     const boxes = document.querySelectorAll("[data-filters]");
     if (!scoped.length) { for (const b of boxes) b.innerHTML = ""; return; }
-    const bySource = {};
-    for (const o of scoped) bySource[o.source] = (bySource[o.source] || 0) + 1;
+    for (const b of boxes) b.innerHTML = filtersHtml(scoped.filter(LIST_TIERS[b.dataset.filters] || (() => true)));
+  }
 
-    const src = [`<span class="lbl">Source</span>`, chipHtml("source", "all", "Toutes", scoped.length, state.filterSource)];
+  // Counts follow the list and the status filter, never the source filter
+  // itself: every chip says how many offers clicking it would show.
+  function filtersHtml(listed) {
+    const shown = listed.filter(matchesStatus);
+    const bySource = {};
+    for (const o of listed) bySource[o.source] = 0;
+    for (const o of shown) bySource[o.source]++;
+    if (state.filterSource !== "all" && !(state.filterSource in bySource)) bySource[state.filterSource] = 0;
+
+    const src = [`<span class="lbl">Source</span>`, chipHtml("source", "all", "Toutes", shown.length, state.filterSource)];
     for (const [k, n] of Object.entries(bySource).sort((a, b) => b[1] - a[1])) {
       src.push(chipHtml("source", k, SOURCES[k] || k, n, state.filterSource));
     }
@@ -856,8 +881,7 @@ claude plugin install veille@veille-emploi</pre>
       chipHtml("status", "applied", "Postulées", null, state.filterStatus),
       chipHtml("status", "all", "Tout", null, state.filterStatus),
     ];
-    const html = src.concat(st).join("");
-    for (const b of boxes) b.innerHTML = html;
+    return src.concat(st).join("");
   }
 
   function chipHtml(kind, value, label, n, active) {
@@ -905,12 +929,12 @@ claude plugin install veille@veille-emploi</pre>
         ? emptyHtml(
             "Pas encore d'offres",
             "Lance un scraping depuis Claude Code pour remplir ce tableau. Les offres arrivent classées, avec une référence courte pour générer un CV adapté.",
-            ["/veille:scrape"]
+            ["/veille-scrape"]
           )
         : emptyHtml(
             "Bienvenue",
             "Aucune recherche n'est encore configurée. Dans Claude Code, l'onboarding crée ton profil à partir de ton CV ou de LinkedIn, puis lance le premier scraping. L'onglet Guide explique le reste.",
-            ["/veille:demarrer"]
+            ["/veille-demarrer"]
           );
       return;
     }
@@ -975,11 +999,45 @@ claude plugin install veille@veille-emploi</pre>
       </div>
       <div class="acts">
         <button class="act apply" data-apply="${esc(o.id)}" title="Rédiger CV, lettre et mail pour cette offre">Candidater</button>
+        <button class="act" data-contacts="${esc(o.id)}" title="${
+          o.contacts ? "Afficher les adresses trouvées" : "Demander à Claude Code de chercher les emails RH (Hunter.io) : coûte 1 crédit sur tes 50 du mois, même sans résultat utile"
+        }">Contacts RH${o.contacts?.emails?.length ? ` (${o.contacts.emails.length})` : ""}</button>
         <button class="act ${isApplied(o) ? "on" : ""}" data-status="applied" data-id="${esc(o.id)}">Postulé</button>
         <button class="act no ${o.status === "rejected" ? "on" : ""}" data-status="rejected" data-id="${esc(o.id)}">Écarter</button>
       </div>
       ${o.rationale ? `<p class="why">${esc(o.rationale)}</p>` : ""}
+      ${contactsHtml(o)}
     </article>`;
+  }
+
+  // Les adresses viennent de la base, donc de la donnée : un mailto n'est
+  // produit que pour une adresse au format strict, le reste s'affiche en texte.
+  const EMAIL_RE = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+
+  function contactsHtml(o) {
+    const c = o.contacts;
+    if (!c) return "";
+    const emails = (Array.isArray(c.emails) ? c.emails : []).filter((e) => EMAIL_RE.test(String(e?.email || "")));
+    const when = c.searchedAt ? ` le ${esc(dayMonth(c.searchedAt))}` : "";
+    if (!emails.length) {
+      return `<details class="contacts" data-contacts-box="${esc(o.id)}"><summary>Contacts RH : aucune adresse trouvée${when}</summary>
+        <p class="hint">Hunter n'a rien pour ${esc(c.domain || o.company || "cette entreprise")}. Relance avec /veille-contacts ${esc(o.ref || "")} et un autre domaine.</p></details>`;
+    }
+    const items = emails.map((e) => {
+      const who = [e.name, e.position].filter(Boolean).join(", ") || (e.type === "generic" ? "adresse générique" : "");
+      const li = safeUrl(e.linkedin);
+      return `<li><a class="mail" href="mailto:${esc(e.email)}">${esc(e.email)}</a>${
+        who ? `<span class="who">${esc(who)}</span>` : ""
+      }${e.confidence != null ? `<span class="conf" title="Confiance Hunter${e.verification ? `, vérification : ${esc(e.verification)}` : ""}">${esc(e.confidence)} %</span>` : ""}${
+        li ? `<a class="conf" href="${esc(li)}" target="_blank" rel="noopener noreferrer">LinkedIn</a>` : ""
+      }</li>`;
+    });
+    const notes = [];
+    if (c.agency) notes.push("Annonce d'un cabinet ou d'une agence : ces contacts sont ceux de l'agence, pas de l'employeur final.");
+    if (c.pattern) notes.push(`Format des adresses : ${esc(c.pattern)}@${esc(c.domain || "")}`);
+    notes.push("Adresses déduites par Hunter : vérifie-les avant d'écrire.");
+    return `<details class="contacts" data-contacts-box="${esc(o.id)}"><summary>Contacts RH (${emails.length})${when}</summary>
+      <ul>${items.join("")}</ul>${notes.map((n) => `<p class="hint">${n}</p>`).join("")}</details>`;
   }
 
   function renderCvs() {
@@ -989,7 +1047,7 @@ claude plugin install veille@veille-emploi</pre>
       box.innerHTML = emptyHtml(
         "Aucun CV généré",
         "Chaque CV adapté à une offre est listé ici. Rédige-le dans l'onglet Candidater, ou avec Claude Code.",
-        ["/veille:cv <ref>"]
+        ["/veille-cv <ref>"]
       );
       return;
     }
@@ -1049,7 +1107,7 @@ claude plugin install veille@veille-emploi</pre>
       box.innerHTML = emptyHtml(
         "Aucun événement repéré",
         "Salons, job datings et forums de recrutement correspondant à ta recherche. Ils sont trouvés par recherche web, ou scrapés depuis une source que tu ajoutes.",
-        ["/veille:events", "/veille:source <url>"]
+        ["/veille-events", "/veille-source <url>"]
       );
       return;
     }
@@ -1077,7 +1135,7 @@ claude plugin install veille@veille-emploi</pre>
       box.innerHTML = emptyHtml(
         "Profil vide",
         "Le profil alimente le classement des offres et la rédaction des CV adaptés. Il se remplit par un entretien guidé : formation, puis chaque expérience au format STAR (situation, tâche, action, résultat).",
-        ["/veille:profil"]
+        ["/veille-profil"]
       );
       return;
     }
@@ -1175,7 +1233,7 @@ claude plugin install veille@veille-emploi</pre>
       box.innerHTML = emptyHtml(
         "Aucune recherche configurée",
         "Une recherche, c'est un objectif : des mots-clés, des lieux, un type de contrat et un positionnement qui sert à réécrire le CV. Tu peux en avoir plusieurs en parallèle.",
-        ["/veille:demarrer"]
+        ["/veille-demarrer"]
       );
       return;
     }
@@ -1204,7 +1262,7 @@ claude plugin install veille@veille-emploi</pre>
         </table></div>
         <p style="font-size:13px;color:var(--muted);margin:10px 0 0">
           Un point ambre signale une source sans passage récent ou revenue vide — souvent le signe qu'un sélecteur a changé.
-          Vérifie-la avec <code class="cmd">/veille:source</code>.
+          Vérifie-la avec <code class="cmd">/veille-source</code>.
         </p>
       </div>
 
@@ -1224,7 +1282,33 @@ claude plugin install veille@veille-emploi</pre>
             </div>`
           )
           .join("")}</div>
-      </div>`;
+      </div>
+      ${hunterHtml()}`;
+  }
+
+  // No Hunter key field here: the dashboard's base is readable by anyone who
+  // opens it. The key lives in a local file; this card explains how to put it
+  // there (pasted to Claude Code, or through the installer).
+  const HUNTER_CMD = "node ~/.veille-emploi/app/scripts/veille-config.mjs secret hunter";
+  const HUNTER_CHECK = "node ~/.veille-emploi/app/scripts/contacts.mjs --account";
+
+  function hunterHtml() {
+    return `<div class="sect">
+      <h2>Contacts RH · clé Hunter.io</h2>
+      <div class="card">
+        <p class="note" style="margin-bottom:12px">Facultatif. Le bouton « Contacts RH » et <code class="cmd">/veille-contacts</code> cherchent les emails du recrutement d'une entreprise avec <b>ta propre</b> clé Hunter.io : aucune n'est fournie avec l'outil. Sans clé, tout le reste fonctionne.</p>
+        <div class="warnbox"><span><b>50 crédits par mois, à utiliser avec parcimonie.</b> Le forfait gratuit donne 50 crédits : compte au plus 50 recherches par mois. Une recherche consomme 1 crédit dès que Hunter renvoie des adresses, <b>même si aucune n'est utile</b> : tu peux payer un crédit et ne voir aucun contact. Seule une recherche où Hunter ne connaît rien du tout est gratuite. Garde-le pour les offres qui comptent ; pour une offre de cabinet ou d'agence d'intérim, il trouve surtout les recruteurs de l'agence.</span></div>
+        <ol class="steps">
+          <li><h3>Créer un compte gratuit</h3><p>Sur <a href="https://hunter.io" target="_blank" rel="noopener noreferrer">hunter.io</a> (bouton d'inscription), puis confirme ton email.</p></li>
+          <li><h3>Copier ta clé</h3><p>Une fois connecté, ouvre <a href="https://hunter.io/api-keys" target="_blank" rel="noopener noreferrer">hunter.io/api-keys</a> (menu de ton compte, rubrique API) et copie la clé. Aide officielle : <a href="https://help.hunter.io/en/articles/1970978-what-is-and-where-i-can-find-my-api-secret-key" target="_blank" rel="noopener noreferrer">où trouver sa clé API</a>.</p></li>
+          <li><h3>L'enregistrer</h3><p>Le plus simple : colle-la dans Claude Code. Il l'enregistre sur ton ordinateur, vérifie qu'elle marche et t'annonce tes crédits. Elle reste dans l'historique de la conversation ; <code class="cmd">/clear</code> la retire de la session en cours, pas de cet historique. Pour qu'elle n'y passe pas du tout, relance plutôt <code class="cmd">Installer.cmd</code> (Windows) ou <code class="cmd">Installer.command</code> (Mac) : à la fin, il demande la clé sans l'afficher.</p></li>
+          <li><h3>Vérifier tes crédits</h3><p>Demande à Claude Code « combien de crédits Hunter me reste-t-il ? », ou lance cette commande dans un terminal (gratuit).</p>
+            <div class="file" style="grid-template-columns:1fr auto;margin-top:8px"><code class="path">${esc(HUNTER_CHECK)}</code><button class="cv" data-copy="${esc(HUNTER_CHECK)}" title="Copier la commande">Copier</button></div></li>
+        </ol>
+        <p class="note" style="margin:12px 0 0">Plutôt le terminal ? <code class="cmd">${esc(HUNTER_CMD)}</code> fait la même chose que l'installeur (sous Windows, <code class="cmd">$HOME</code> en PowerShell à la place de <code class="cmd">~</code>).</p>
+        <p class="note" style="margin:8px 0 0">Pourquoi pas un champ ici ? Ce que contient le dashboard est lisible par toute personne qui l'ouvre. Pour effacer une clé pour de bon, où qu'elle traîne, régénère-la sur hunter.io.</p>
+      </div>
+    </div>`;
   }
 
   function emptyHtml(title, body, cmds) {
@@ -1269,6 +1353,19 @@ claude plugin install veille@veille-emploi</pre>
       return;
     }
 
+    const contacts = e.target.closest("[data-contacts]");
+    if (contacts) {
+      const offer = state.offers.find((o) => o.id === contacts.dataset.contacts);
+      if (!offer) return;
+      const box = document.querySelector(`[data-contacts-box="${CSS.escape(offer.id)}"]`);
+      if (box) {
+        box.open = !box.open;
+        return;
+      }
+      requestContacts(contacts, offer);
+      return;
+    }
+
     const dl = e.target.closest("[data-dl]");
     if (dl) {
       const entry = state.cvs.find((c) => c.id === dl.dataset.cvid);
@@ -1299,7 +1396,7 @@ claude plugin install veille@veille-emploi</pre>
   /* ---------------------------------------------------------- candidater */
 
   // Rédaction dans la page, sur le compte Claude de la personne qui regarde
-  // (capacité `sample`). Mêmes règles que /veille:cv : elles résument
+  // (capacité `sample`). Mêmes règles que /veille-cv : elles résument
   // docs/CV-RULES.md — modifier les deux ensemble.
   const CV_RULES = `- Une seule page : profil junior, contenu resserré. 3 à 4 expériences au plus, 2 à 4 puces chacune ; coupe les expériences anciennes sans rapport avec le poste.
 - Sous le nom, l'intitulé exact du poste visé, tel que l'annonce le formule.
@@ -1336,6 +1433,9 @@ claude plugin install veille@veille-emploi</pre>
     result: null,
     ctl: null,
     savedId: null,
+    // Pourquoi Claude est absent, pour le dire clairement au lieu d'un texte unique.
+    sampleChecked: false,
+    diag: null,
   };
   const $ = (id) => document.getElementById(id);
 
@@ -1410,7 +1510,7 @@ claude plugin install veille@veille-emploi</pre>
     const msg =
       code === "cancelled" ? "" :
       code === "not_granted" || code === "sampling_disabled" || code === "not_declared" || code === "capability_disabled"
-        ? "Claude n'est pas autorisé dans ce dashboard. Utilise /veille:cv dans Claude Code."
+        ? "Claude n'est pas autorisé dans ce dashboard. Utilise /veille-cv dans Claude Code."
       : code === "rate_limited" ? "Limite d'utilisation atteinte. Réessaie dans un moment."
       : code === "session_expired" ? "Ta session claude.ai a expiré : reconnecte-toi, puis réessaie."
       : code === "invalid_json" ? "La réponse de Claude était mal formée. Réessaie."
@@ -1456,13 +1556,59 @@ claude plugin install veille@veille-emploi</pre>
       : "colle tout : missions, profil recherché, compétences";
   }
 
+  // Claude (la capacité `sample`) peut manquer pour des raisons différentes ; la
+  // plateforme les rend volontairement indiscernables, alors on relève ce qui se
+  // voit depuis la page : est-elle dans l'afficheur Claude, quel état annonce
+  // `permissions`. Le diagnostic est copiable, pour qu'on puisse nous l'envoyer.
+  async function diagnoseSample() {
+    const d = {
+      afficheurClaude: Boolean(window.claude?.use),
+      dansUnCadre: window.top !== window,
+      hote: location.hostname,
+      base: state.ready,
+      sample: null,
+    };
+    try {
+      const perms = await window.claude?.use?.("permissions");
+      d.permissions = perms ? await perms.state("sample") : "indisponible";
+    } catch {
+      d.permissions = "erreur";
+    }
+    studio.diag = d;
+    renderStudioAvailability();
+  }
+
+  function sampleMissingText() {
+    const d = studio.diag;
+    if (!window.claude?.use) {
+      return "Cette page n'est pas ouverte dans l'afficheur Claude (lien direct ou copie du fichier). Ouvre le lien du dashboard depuis claude.ai, dans un navigateur sur ordinateur.";
+    }
+    if (d?.permissions === "denied") {
+      return "Tu as refusé que cette page utilise Claude. Autorise-la depuis le menu Permissions de l'artefact (ou recharge la page), puis réessaie.";
+    }
+    return "Claude n'est pas disponible dans cet affichage. Essaie sur ordinateur, dans un navigateur sur claude.ai (l'application mobile et certains affichages ne le permettent pas), et recharge la page. Si ça persiste, ton compte n'y a peut-être pas accès : utilise /veille-cv dans Claude Code.";
+  }
+
+  function diagText() {
+    return "Diagnostic Veille Emploi : " + JSON.stringify({ ...studio.diag, sample: Boolean(studio.sample), navigateur: navigator.userAgent });
+  }
+
   function renderStudioAvailability() {
     const note = $("stNote");
     let msg = "";
     if (!state.ready) msg = state.offline ? "Base indisponible dans cette vue." : "Connexion à la base…";
-    else if (!studio.sample) msg = "Claude n'est pas disponible dans cette vue du dashboard. Ouvre-le sur claude.ai, ou utilise /veille:cv dans Claude Code.";
-    else if (!hasProfile()) msg = "Ton profil est vide : sans lui, il n'y a rien de vrai à mettre dans un CV. Complète-le d'abord avec /veille:profil dans Claude Code.";
+    else if (!studio.sampleChecked) msg = "Connexion à Claude…";
+    else if (!studio.sample) msg = sampleMissingText();
+    else if (!hasProfile()) msg = "Ton profil est vide : sans lui, il n'y a rien de vrai à mettre dans un CV. Complète-le d'abord avec /veille-profil dans Claude Code.";
     note.textContent = msg;
+    if (msg && studio.sampleChecked && !studio.sample && studio.diag) {
+      const copy = document.createElement("button");
+      copy.className = "cv";
+      copy.style.marginLeft = "8px";
+      copy.textContent = "Copier le diagnostic";
+      copy.dataset.copy = diagText();
+      note.append(copy);
+    }
     note.hidden = !msg;
     if (!studio.ctl) $("stAnalyze").disabled = Boolean(msg);
   }
@@ -2053,8 +2199,10 @@ Réponds uniquement par ce JSON :
 
   /* -- bouton Rafraîchir : passe la main à Claude Code -- */
 
-  async function requestScrape(btn) {
-    const msg = $("refreshMsg");
+  // Poste la demande en commentaire « Send to Claude » ancré sur le bouton ;
+  // sans session Claude Code à l'écoute, copie la commande à coller à la main.
+  // Rend "sent", "denied" ou "copied".
+  async function askClaude(btn, text, command) {
     const c = studio.comments;
     let can = "off";
     if (c) {
@@ -2064,24 +2212,47 @@ Réponds uniquement par ce JSON :
       btn.disabled = true;
       try {
         const anchor = await c.anchorFor(btn);
-        await c.sendToClaude({
-          anchor,
-          text: "Rafraîchir la veille : lance /veille:scrape sur les recherches actives, puis réponds ici avec le bilan.",
-        });
-        msg.textContent = "Demande envoyée à Claude Code. Les nouvelles offres apparaîtront ici au fil du scraping.";
-        return;
+        await c.sendToClaude({ anchor, text });
+        return "sent";
       } catch (e) {
-        if (e?.code === "consent_required" || e?.code === "forbidden") {
-          msg.textContent = "Demande non envoyée : le dashboard n'a pas l'autorisation de commenter.";
-          return;
-        }
+        if (e?.code === "consent_required" || e?.code === "forbidden") return "denied";
         console.error("sendToClaude", e);
       } finally {
         btn.disabled = false;
       }
     }
-    try { await navigator.clipboard.writeText("/veille:scrape"); } catch {}
-    msg.textContent = "Aucune session Claude Code n'écoute ce dashboard. Commande /veille:scrape copiée : colle-la dans Claude Code.";
+    try { await navigator.clipboard.writeText(command); } catch {}
+    return "copied";
+  }
+
+  async function requestScrape(btn) {
+    const msg = $("refreshMsg");
+    const r = await askClaude(
+      btn,
+      "Rafraîchir la veille : lance /veille-scrape sur les recherches actives, puis réponds ici avec le bilan.",
+      "/veille-scrape"
+    );
+    msg.textContent = r === "sent"
+      ? "Demande envoyée à Claude Code. Les nouvelles offres apparaîtront ici au fil du scraping."
+      : r === "denied"
+      ? "Demande non envoyée : le dashboard n'a pas l'autorisation de commenter."
+      : "Aucune session Claude Code n'écoute ce dashboard. Commande /veille-scrape copiée : colle-la dans Claude Code.";
+  }
+
+  async function requestContacts(btn, offer) {
+    const ref = offer.ref || offer.id;
+    const command = `/veille-contacts ${ref}`;
+    const r = await askClaude(
+      btn,
+      `Contacts RH : lance ${command} (${offer.title || ""}${offer.company ? ` chez ${offer.company}` : ""}), puis réponds ici avec les adresses trouvées.`,
+      command
+    );
+    btn.textContent = r === "sent" ? "Demandé" : r === "denied" ? "Non envoyé" : "Commande copiée";
+    btn.title = r === "sent"
+      ? "Claude Code cherche les adresses : elles apparaîtront sous l'offre."
+      : r === "denied"
+      ? "Le dashboard n'a pas l'autorisation de commenter."
+      : `Aucune session Claude Code n'écoute ce dashboard : ${command} est copié, colle-le dans Claude Code.`;
   }
 
   /* -- branchements -- */
@@ -2129,12 +2300,17 @@ Réponds uniquement par ce JSON :
 
   /* ---------------------------------------------------------- démarrage */
 
+  // Hors de l'afficheur Claude il n'y a ni `window.claude` ni réponse à attendre.
+  if (!window.claude?.use) studio.sampleChecked = true;
   render();
 
   // Capacités facultatives : chacune absente, la fonction qui en dépend se
   // masque ou se replie, le reste du dashboard marche.
   if (window.claude?.use) {
-    window.claude.use("sample").then((s) => { studio.sample = s; render(); }, () => {});
+    window.claude.use("sample").then(
+      (s) => { studio.sample = s; studio.sampleChecked = true; if (!s) diagnoseSample(); render(); },
+      () => { studio.sampleChecked = true; diagnoseSample(); render(); }
+    );
     window.claude.use("downloads").then((d) => { studio.downloads = d; }, () => {});
     window.claude.use("comments").then((c) => { studio.comments = c; }, () => {});
   }

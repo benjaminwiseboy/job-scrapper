@@ -1,25 +1,33 @@
 // Indeed — Cloudflare rejette les requêtes HTTP nues, mais laisse passer une
 // vraie empreinte navigateur. Tri par date pour que la pagination puisse
 // s'arrêter dès qu'on sort de la fenêtre.
-import { newPage, dismissCookies } from "../lib/browser.mjs";
-import { makeOffer, guessContract } from "../lib/normalize.mjs";
+import { newPage, waitForResults } from "../lib/browser.mjs";
+import { makeOffer, guessContract, allKnown } from "../lib/normalize.mjs";
 import { parseFrenchDate } from "../lib/dates.mjs";
 
 export const id = "indeed";
 export const label = "Indeed";
 export const needsBrowser = true;
 
-export async function scrape({ browser, query, location, maxPages = 3, searchId }) {
-  const page = await newPage(browser);
+// Cloudflare lets a fresh browser through but challenges its second
+// navigation ("Security Check"): every results page gets its own context.
+export const freshPages = true;
+
+export async function scrape({ browser, query, location, maxPages = 3, searchId, known }) {
   const offers = [];
   const seen = new Set();
 
-  try {
-    for (let p = 0; p < maxPages; p++) {
+  for (let p = 0; p < maxPages; p++) {
+    const page = await newPage(browser);
+    try {
       const url = `https://fr.indeed.com/jobs?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}&sort=date&start=${p * 10}`;
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-      await page.waitForTimeout(1800);
-      if (p === 0) await dismissCookies(page);
+      if (!(await waitForResults(page, "[data-jk]", 5000))) {
+        if (p === 0 && /security check|un instant/i.test(await page.title())) {
+          throw new Error("contrôle anti-robot Cloudflare");
+        }
+        break;
+      }
 
       const cards = await page.$$eval("[data-jk]", (els) =>
         els.map((el) => {
@@ -63,9 +71,12 @@ export async function scrape({ browser, query, location, maxPages = 3, searchId 
         );
       }
       if (offers.length === before) break; // plus rien de neuf : fin de pagination
+      // Sans date sur les cartes, c'est le seul signal d'arrêt : trié par date,
+      // une page entièrement déjà connue veut dire que la suite l'est aussi.
+      if (allKnown(offers.slice(before), known)) break;
+    } finally {
+      await page.close();
     }
-  } finally {
-    await page.close();
   }
   return offers;
 }

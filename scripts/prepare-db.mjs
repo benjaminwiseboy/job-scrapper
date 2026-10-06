@@ -5,50 +5,72 @@
 // script écrit donc un fichier par offre et imprime les lots à passer tels
 // quels dans `writes`, chaque entrée pointant vers son fichier.
 //
-//   node scripts/prepare-db.mjs --report run.json --search achats --code ACH \
-//     --next-ref 1 --known known/ --out docs/
+// Deux temps :
 //
-// --known     : dossier contenant un fichier par docId déjà en base (tel que
-//               produit par une lecture `query ... out_dir`), ou fichier JSON
-//               listant les docId. Sert à ne réécrire que les nouveautés.
-// --dismissed : document `dismissed/<recherche>` ({ids: [...]}), les offres
-//               écartées à la main puis purgées. Sans lui, une offre écartée
-//               reviendrait au scraping suivant sa purge — la décision humaine
-//               survit à la suppression de la fiche.
+//   1. Liste à classer, une ligne par offre nouvelle (rien n'est écrit) :
+//      node scripts/prepare-db.mjs --report run.json --list
+//
+//   2. Écritures, une fois le classement posé dans un fichier :
+//      node scripts/prepare-db.mjs --report run.json --search achats --code ACH \
+//        --next-ref 1 --tiers tiers.json --seen seen.json --seen-version 3 --out db-writes/achats
+//
+// --tiers   : {"<docId>": {"tier": "cible", "rationale": "…"}, "<docId>": "hors", …}.
+//             Les offres `hors` ne sont pas écrites en base : elles rejoignent
+//             seulement `seen`, pour ne plus jamais revenir. Une offre absente du
+//             fichier (ou sans --tiers, profil vide) est écrite non classée.
+// --seen    : document `seen/<recherche>` lu en base ({ids: [...]}), s'il existe.
+//             Le script en écrit la version fusionnée dans `<out>/_seen.json`.
+// --known / --dismissed : garde-fous, mêmes formats ; une offre qui s'y trouve
+//             n'est jamais réécrite.
+//
+// Les références (`ACH-042`) ne sont attribuées qu'aux offres écrites : écarter
+// une offre hors cible ne laisse pas de trou dans la numérotation.
 
-import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs";
+import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync, rmSync, statSync } from "node:fs";
 import { join, basename } from "node:path";
+
+// Un document `seen` garde au plus ce nombre d'identifiants, les plus récents.
+const SEEN_CAP = 15000;
 
 const args = parseArgs(process.argv.slice(2));
 const report = JSON.parse(readFileSync(args.report, "utf8"));
 const searchId = args.search || report.searchId || "default";
+
+const blocked = loadIds(args.known);
+for (const id of loadIds(args.dismissed)) blocked.add(id);
+for (const id of loadIds(args.seen)) blocked.add(id);
+const offers = report.offers.filter((o) => !blocked.has(o.docId));
+
+if (args.list) {
+  printList(offers);
+  process.exit(0);
+}
+
 const code = (args.code || searchId.slice(0, 3)).toUpperCase();
 const outDir = args.out || "db-writes";
-
-const known = loadKnown(args.known);
-const dismissed = loadDismissed(args.dismissed);
-for (const id of dismissed) known.add(id);
+const tiers = args.tiers && existsSync(args.tiers) ? JSON.parse(readFileSync(args.tiers, "utf8")) : {};
 let nextRef = Number(args["next-ref"] || 1);
 
 if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
 const fresh = [];
-const skipped = [];
-const rejetees = [];
+const hors = [];
+const parTier = { cible: 0, possible: 0, hors: 0, non_classees: 0 };
 
-for (const offer of report.offers) {
-  if (dismissed.has(offer.docId)) {
-    rejetees.push(offer.docId);
+for (const offer of offers) {
+  const { tier, rationale } = readTier(tiers[offer.docId]);
+  if (tier === "hors") {
+    hors.push(offer.docId);
+    parTier.hors++;
     continue;
   }
-  if (known.has(offer.docId)) {
-    skipped.push(offer.docId);
-    continue;
-  }
+  parTier[tier || "non_classees"]++;
   const doc = {
     ...offer,
     searchId,
+    tier,
+    rationale,
     ref: `${code}-${String(nextRef).padStart(3, "0")}`,
   };
   delete doc.docId; // l'identifiant vit dans le doc_id, pas dans le corps
@@ -59,26 +81,40 @@ for (const offer of report.offers) {
 }
 
 // Lots de 50 : la limite d'un batch ArtifactData.
-const batches = [];
-for (let i = 0; i < fresh.length; i += 50) {
-  batches.push(
-    fresh.slice(i, i + 50).map((f) => ({
-      op: "set",
-      collection: "offers",
-      doc_id: f.docId,
-      file_path: f.file.replace(/\\/g, "/"),
-    }))
-  );
+const writes = fresh.map((f) => ({ op: "set", collection: "offers", doc_id: f.docId, file_path: slash(f.file) }));
+
+// L'index des offres vues : tout ce qui vient d'être écrit ou écarté, plus les
+// identifiants connus par ailleurs (--known, --dismissed). Au premier passage,
+// sans document `seen`, c'est ce qui l'amorce à partir de la base.
+const newIds = [...fresh.map((f) => f.docId), ...hors];
+const previousSeen = loadIds(args.seen);
+const missingKnown = [...blocked].some((id) => !previousSeen.has(id));
+if (newIds.length || missingKnown) {
+  const ids = [...new Set([...blocked, ...newIds])].slice(-SEEN_CAP);
+  const seenFile = join(outDir, "_seen.json");
+  // `screened` : le sous-ensemble jamais écrit en base (hors cible), que
+  // check-open.mjs n'a pas à vérifier.
+  const previousScreened = readSeen(args.seen).screened || [];
+  const screened = [...new Set([...previousScreened, ...hors])].slice(-SEEN_CAP);
+  writeFileSync(seenFile, JSON.stringify({ ids, screened, updatedAt: new Date().toISOString() }));
+  const entry = { op: "set", collection: "seen", doc_id: searchId, file_path: slash(seenFile) };
+  if (args["seen-version"]) entry.if_version = Number(args["seen-version"]);
+  writes.push(entry);
 }
+
+const batches = [];
+for (let i = 0; i < writes.length; i += 50) batches.push(writes.slice(i, i + 50));
 
 console.log(
   JSON.stringify(
     {
       searchId,
       code,
-      nouvelles: fresh.length,
-      deja_connues: skipped.length,
-      ecartees_ignorees: rejetees.length,
+      nouvelles: offers.length,
+      ecrites: fresh.length,
+      hors_cible_non_ecrites: hors.length,
+      par_tier: parTier,
+      deja_connues: report.offers.length - offers.length,
       next_ref_apres: nextRef,
       lots: batches.length,
       refs: fresh.length ? `${fresh[0].ref} → ${fresh[fresh.length - 1].ref}` : null,
@@ -96,33 +132,52 @@ for (let i = 0; i < batches.length; i++) {
 
 // ---------------------------------------------------------------- utilitaires
 
-/** Document `dismissed/<recherche>` : {ids: [...]}, ou simple tableau. */
-function loadDismissed(path) {
-  const set = new Set();
-  if (!path || !existsSync(path)) return set;
-  const raw = JSON.parse(readFileSync(path, "utf8"));
-  const doc = raw.data || raw;
-  for (const id of doc.ids || (Array.isArray(doc) ? doc : [])) set.add(String(id));
-  return set;
+/**
+ * Une ligne par offre, séparée par des tabulations : juste ce qu'il faut pour
+ * classer, sans ouvrir un fichier par offre.
+ */
+function printList(list) {
+  console.log(["docId", "titre", "entreprise", "lieu", "contrats", "libellé contrat", "salaire"].join("\t"));
+  for (const o of list) {
+    console.log(
+      [o.docId, o.title, o.company, o.location, (o.contractTypes || []).join(",") || "?", o.contract, o.salary]
+        .map((v) => String(v ?? "").replace(/\s+/g, " ").trim())
+        .join("\t")
+    );
+  }
+  console.error(`${list.length} offres nouvelles à classer`);
 }
 
-function loadKnown(path) {
+function readTier(value) {
+  if (!value) return { tier: null, rationale: "" };
+  if (typeof value === "string") return { tier: value, rationale: "" };
+  return { tier: value.tier || null, rationale: value.rationale || "" };
+}
+
+function readSeen(path) {
+  if (!path || path === true || !existsSync(path)) return {};
+  const raw = JSON.parse(readFileSync(path, "utf8"));
+  return raw.data || raw;
+}
+
+function slash(path) {
+  return path.replace(/\\/g, "/");
+}
+
+/** Documents `{ids}` (enveloppés ou non), tableaux JSON, ou dossiers d'un fichier par doc_id. */
+function loadIds(path) {
   const set = new Set();
-  if (!path || !existsSync(path)) return set;
-  try {
-    const stat = readdirSync(path, { withFileTypes: true });
-    for (const entry of stat) {
-      if (entry.isFile() && entry.name.endsWith(".json")) set.add(basename(entry.name, ".json"));
-      else if (entry.isDirectory()) {
-        for (const sub of readdirSync(join(path, entry.name))) {
-          if (sub.endsWith(".json")) set.add(basename(sub, ".json"));
-        }
-      }
+  if (!path || path === true || !existsSync(path)) return set;
+  if (statSync(path).isDirectory()) {
+    for (const entry of readdirSync(path, { withFileTypes: true })) {
+      if (entry.isDirectory()) for (const id of loadIds(join(path, entry.name))) set.add(id);
+      else if (entry.name.endsWith(".json")) set.add(basename(entry.name, ".json"));
     }
-  } catch {
-    // pas un dossier : on tente un JSON listant les identifiants
-    for (const id of JSON.parse(readFileSync(path, "utf8"))) set.add(String(id));
+    return set;
   }
+  const raw = JSON.parse(readFileSync(path, "utf8"));
+  const doc = raw.data || raw;
+  for (const id of Array.isArray(doc) ? doc : doc.ids || []) set.add(String(id));
   return set;
 }
 
@@ -131,7 +186,7 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     if (!argv[i].startsWith("--")) continue;
     const key = argv[i].slice(2);
-    out[key] = argv[i + 1]?.startsWith("--") ? true : argv[++i];
+    out[key] = argv[i + 1] === undefined || argv[i + 1].startsWith("--") ? true : argv[++i];
   }
   return out;
 }

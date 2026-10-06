@@ -1,5 +1,5 @@
 ---
-name: events
+name: veille-events
 description: Trouve les salons, job datings et forums de recrutement pertinents pour le profil et les remplit dans l'onglet Événements du dashboard « Veille Emploi ». Utiliser quand l'utilisateur cherche des événements emploi, des salons ou du job dating.
 ---
 
@@ -10,16 +10,16 @@ commande s'appuie d'abord sur la recherche web, et sur les sources scrapables
 qu'on a explicitement ajoutées. C'est assumé — un scraper dédié à ce terrain
 serait en panne un mois sur deux.
 
-**Profil actif** : `node "${CLAUDE_PLUGIN_ROOT}/scripts/veille-config.mjs"` donne
+**Profil actif** : `node "${VEILLE_ROOT}/scripts/veille-config.mjs"` donne
 `artifactUrl` (notée URL ci-dessous) et `workspace` (noté `<W>`) ; code de sortie
-3 = aucun profil, propose `/veille:demarrer` et arrête-toi. Règles communes :
-`${CLAUDE_PLUGIN_ROOT}/docs/CONTEXTE.md`. Schéma :
-`${CLAUDE_PLUGIN_ROOT}/docs/SCHEMA.md`.
+3 = aucun profil, propose `/veille-demarrer` et arrête-toi. Règles communes :
+`${VEILLE_ROOT}/docs/CONTEXTE.md`. Schéma :
+`${VEILLE_ROOT}/docs/SCHEMA.md`.
 
 ## 1. Cadrer
 
 Lis `searches` (métiers visés, lieux) et `profile/aspirations` (secteurs,
-mobilité réelle). Sans recherche configurée, renvoie vers `/veille:demarrer`.
+mobilité réelle). Sans recherche configurée, renvoie vers `/veille-demarrer`.
 
 Un événement à l'autre bout du pays n'a d'intérêt que s'il est en ligne :
 respecte la mobilité déclarée.
@@ -48,11 +48,11 @@ les listes d'annuaires traînent des éditions passées.
 
 ## 3. Sources ajoutées
 
-Si `${CLAUDE_PLUGIN_ROOT}/docs/EVENT-SOURCES.md` existe, il liste les sources scrapables validées par
-`/veille:source` (Seekube ou autre). Lance leur script et fusionne les résultats.
+Si `${VEILLE_ROOT}/docs/EVENT-SOURCES.md` existe, il liste les sources scrapables validées par
+`/veille-source` (Seekube ou autre). Lance leur script et fusionne les résultats.
 
 Si l'utilisateur mentionne une source à ajouter, ne l'improvise pas ici :
-renvoie vers `/veille:source <url>`, qui teste et prépare l'extracteur.
+renvoie vers `/veille-source <url>`, qui teste et prépare l'extracteur.
 
 ## 4. Écrire
 

@@ -1,16 +1,18 @@
 // Météojob — application Angular, donc navigateur obligatoire. Les champs
 // portent des id préfixés par l'id de l'offre (`57045156-company-name`), ce qui
 // donne une extraction stable. Les dates sont relatives ("Il y a 3 jours").
-import { newPage, dismissCookies } from "../lib/browser.mjs";
-import { makeOffer } from "../lib/normalize.mjs";
+import { newPage, waitForResults } from "../lib/browser.mjs";
+import { makeOffer, allKnown } from "../lib/normalize.mjs";
 import { parseFrenchDate } from "../lib/dates.mjs";
 
 export const id = "meteojob";
 export const label = "Météojob";
 export const needsBrowser = true;
 
-export async function scrape({ browser, query, location, maxPages = 3, searchId, since }) {
-  const page = await newPage(browser);
+const CARD = "div.cc-job-offer-main-content";
+
+export async function scrape({ browser, page: lanePage, query, location, maxPages = 3, searchId, since, known }) {
+  const page = lanePage || (await newPage(browser));
   const offers = [];
   const seen = new Set();
 
@@ -18,11 +20,9 @@ export async function scrape({ browser, query, location, maxPages = 3, searchId,
     for (let p = 1; p <= maxPages; p++) {
       const url = `https://www.meteojob.com/jobs?what=${encodeURIComponent(query)}&where=${encodeURIComponent(location)}&sort=date&page=${p}`;
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-      await page.waitForTimeout(1800);
-      if (p === 1) await dismissCookies(page);
-      await page.waitForTimeout(1200);
+      if (!(await waitForResults(page, CARD))) break;
 
-      const cards = await page.$$eval("div.cc-job-offer-main-content", (nodes) =>
+      const cards = await page.$$eval(CARD, (nodes) =>
         nodes.map((card) => {
           const href = card.querySelector('a[href^="/jobs/"]')?.getAttribute("href") || "";
           const offerId = href.match(/\/jobs\/(\d+)/)?.[1] || "";
@@ -73,9 +73,10 @@ export async function scrape({ browser, query, location, maxPages = 3, searchId,
       if (offers.length === before) break;
       // Tri par date décroissante : page entièrement hors fenêtre -> on arrête.
       if (since && newestOnPage && newestOnPage < since) break;
+      if (allKnown(offers.slice(before), known)) break;
     }
   } finally {
-    await page.close();
+    if (!lanePage) await page.close();
   }
   return offers;
 }

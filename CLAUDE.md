@@ -1,14 +1,16 @@
 # Contexte du projet
 
-Assistant de recherche d'emploi, distribué comme **plugin Claude Code**
-(`veille`, catalogue `veille-emploi`). Ce fichier sert à qui travaille sur le
-dépôt : un plugin ne charge pas le `CLAUDE.md` de sa racine. Les règles que les
+Assistant de recherche d'emploi, distribué comme un **zip de skills Claude
+Code** publié en Release GitHub. `Installer.cmd` / `Installer.command`
+téléchargent la Release, vérifient son SHA-256 et lancent son `install.mjs`.
+Ce fichier sert à qui travaille sur le dépôt : il n'est pas livré. Les règles que les
 commandes doivent suivre chez l'utilisateur vivent dans `docs/CONTEXTE.md`, que
 chaque skill cite — c'est là qu'il faut les modifier.
 
-- Les commandes sont les skills de `skills/<nom>/SKILL.md`, invoquées
-  `/veille:<nom>`. Elles référencent les fichiers du plugin par
-  `${CLAUDE_PLUGIN_ROOT}`, substitué au chargement.
+- Les commandes sont les skills de `.claude/skills/veille-<nom>/SKILL.md`,
+  invoquées `/veille-<nom>` (livrées sous `skills/<nom>/` dans le zip). Elles
+  référencent les fichiers de l'application par `${VEILLE_ROOT}`, remplacé par
+  `scripts/install.mjs` à l'installation ; dans un clone, c'est la racine du dépôt.
 - Chaque profil a son propre artefact dashboard (sa base) et son dossier de
   travail, résolus par `scripts/veille-config.mjs` depuis
   `~/.veille-emploi/config.json`. **Aucune URL d'artefact en dur** dans le code
@@ -19,10 +21,26 @@ chaque skill cite — c'est là qu'il faut les modifier.
   toute lecture ou écriture plutôt que de deviner un nom de champ.
 - Il n'y a **aucune tâche planifiée** : tout se déclenche à la main, en local.
 
-Pour tester ses modifications : `claude plugin marketplace add ./` puis
-`claude plugin install veille@veille-emploi` (chargé en place), ou
-`claude --plugin-dir .`. Valider avec `claude plugin validate .` — l'avertissement
-sur ce `CLAUDE.md` est attendu.
+Pour tester ses modifications : ouvrir Claude Code dans ce dossier (les skills
+de `.claude/skills/` y sont chargées), ou fabriquer le zip (`npm run package`),
+le dézipper et lancer son `veille-emploi/scripts/install.mjs` : c'est, sans
+téléchargement, ce qu'obtiendra un utilisateur.
+
+## Versions
+
+- La version vit dans `package.json`, seule source. `npm version
+  patch|minor|major` vérifie la branche (`scripts/release-check.mjs`), fabrique
+  le zip, commite, tague `vX.Y.Z` et pousse ; `.github/workflows/release.yml`
+  publie alors la Release. Un tag avec tiret (`1.3.0-beta.1`) donne une
+  pre-release, que `releases/latest` ne sert jamais.
+- Les noms des assets ne changent jamais : les installeurs visent
+  `releases/latest/download/veille-emploi.zip`.
+- Ne jamais déplacer ni réutiliser un tag publié : une correction est une
+  nouvelle version. Le rollback se fait sur GitHub (README, « Revenir en
+  arrière »).
+- Un changement de `docs/SCHEMA.md` doit rester lisible par la version
+  précédente, ou être accompagné d'une migration : un rollback du code ne
+  défait rien en base.
 
 ## Conventions
 
@@ -45,8 +63,8 @@ sur ce `CLAUDE.md` est attendu.
   dépendre de la présence de Chromium.
 - Commentaires et messages de commit en anglais ; interface, contenu et échanges
   avec l'utilisateur en français.
-- `db-writes/`, `cv/` et `.veille-tmp/` sont des dossiers de travail, ignorés par
-  git. Chez un utilisateur, ils vivent dans le dossier de travail du profil.
+- `db-writes/`, `cv/`, `.veille-tmp/` et `.veille-cache/` sont des dossiers de
+  travail, ignorés par git. Chez un utilisateur, ils vivent dans le dossier de travail du profil.
 
 ## Ce qui est hors limites
 

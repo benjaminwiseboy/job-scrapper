@@ -1,7 +1,7 @@
 // Local registry of job-search profiles. Each profile is one dashboard
 // artifact (its URL is the database) plus a local workspace folder for
-// working files (CVs, scrape reports, batches). Lives outside the plugin so it
-// survives plugin updates and works from any folder.
+// working files (CVs, scrape reports, batches). Lives outside the app so it
+// survives updates and works from any folder.
 //
 //   node scripts/veille-config.mjs                 active profile (JSON)
 //   node scripts/veille-config.mjs get [--profile <id>]
@@ -10,12 +10,15 @@
 //   node scripts/veille-config.mjs use <id>
 //   node scripts/veille-config.mjs set --profile <id> --dashboard-hash <hash>
 //   node scripts/veille-config.mjs remove <id>     forgets the profile, touches neither artifact nor files
+//   node scripts/veille-config.mjs secret hunter [<key>] [--remove]   stores an API key in secrets.json
+//                                  (no key: asks for it, hidden, in an interactive terminal)
 //
 // Exit codes: 0 ok, 2 bad usage, 3 no profile configured / unknown profile.
 // The config directory can be moved with VEILLE_HOME.
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { CONFIG_PATH, defaultWorkspace, loadConfig, saveConfig } from "./lib/config.mjs";
+import { askHidden } from "./lib/prompt.mjs";
+import { CONFIG_PATH, SECRETS_PATH, defaultWorkspace, getSecret, loadConfig, saveConfig, setSecret } from "./lib/config.mjs";
 
 function describe(config, id) {
   const p = config.profiles[id];
@@ -38,7 +41,7 @@ switch (cmd) {
     if (!id || !config.profiles[id]) {
       fail(3, id
         ? `Profil inconnu : ${id}. Profils existants : ${Object.keys(config.profiles).join(", ") || "aucun"}.`
-        : "Aucun profil configuré. Lance /veille:demarrer pour créer le premier.");
+        : "Aucun profil configuré. Lance /veille-demarrer pour créer le premier.");
     }
     console.log(JSON.stringify(describe(config, id), null, 2));
     break;
@@ -94,8 +97,23 @@ switch (cmd) {
     console.log(JSON.stringify({ removed: positional, active: config.active }, null, 2));
     break;
   }
+  case "secret": {
+    // Never echoes the key: only whether one is set. Without a value, asks for
+    // it in the terminal (hidden), so it stays out of the shell history; from a
+    // non-interactive shell it only reports the status. Claude passes the value
+    // when the user pasted the key in the conversation.
+    const [name, given] = rest.filter((a) => !a.startsWith("--"));
+    if (!/^[a-z]+$/.test(name || "")) fail(2, "Usage : secret <nom> [<clé>] [--remove]");
+    if (args.remove) setSecret(name, null);
+    else {
+      const value = given || (process.stdin.isTTY ? await askHidden(`Colle ta clé ${name} puis Entrée : `) : "");
+      if (value.trim()) setSecret(name, value.trim());
+    }
+    console.log(JSON.stringify({ name, set: Boolean(getSecret(name)), path: SECRETS_PATH }, null, 2));
+    break;
+  }
   default:
-    fail(2, `Commande inconnue : ${cmd}. Attendu : get, list, add, use, set, remove.`);
+    fail(2, `Commande inconnue : ${cmd}. Attendu : get, list, add, use, set, remove, secret.`);
 }
 
 function parseArgs(argv) {

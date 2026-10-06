@@ -17,8 +17,49 @@ export async function launchBrowser() {
   return chromium.launch(options);
 }
 
+// Images, fonts and media are never read by an extractor: skipping them
+// roughly halves the load time of a results page.
+const SKIPPED_RESOURCES = new Set(["image", "font", "media"]);
+
+/**
+ * One context per source lane: a lane reuses its page from one search to the
+ * next, so the cookie banner is dismissed once per lane, not once per search.
+ */
+export async function newContext(browser) {
+  const context = await browser.newContext({ userAgent: UA, locale: "fr-FR" });
+  await context.route("**/*", (route) =>
+    SKIPPED_RESOURCES.has(route.request().resourceType()) ? route.abort() : route.continue()
+  );
+  return context;
+}
+
 export async function newPage(browser) {
-  return browser.newPage({ userAgent: UA, locale: "fr-FR" });
+  const context = await newContext(browser);
+  const page = await context.newPage();
+  // Closing a standalone page also releases its private context.
+  page.on("close", () => context.close().catch(() => {}));
+  return page;
+}
+
+/**
+ * Waits until the results are rendered instead of sleeping a fixed time.
+ * Dismisses the cookie banner on the page's first visit, then
+ * waits again: on Météojob and the APEC the banner holds the results back.
+ * Resolves false when nothing showed up (empty page, layout change).
+ */
+export async function waitForResults(page, selector, timeout = 8000) {
+  const found = () =>
+    page.waitForSelector(selector, { timeout, state: "attached" }).then(() => true, () => false);
+  if (!page.__veilleCookies) {
+    page.__veilleCookies = true;
+    await Promise.race([found(), page.waitForTimeout(2500)]);
+    await dismissCookies(page, 3000);
+  }
+  const ok = await found();
+  // Cards are inserted in one go by the frameworks used, but a short settle
+  // catches the last ones of a list rendered in chunks.
+  if (ok) await page.waitForTimeout(300);
+  return ok;
 }
 
 // Les bandeaux cookies bloquent le rendu des résultats sur Météojob et l'APEC.

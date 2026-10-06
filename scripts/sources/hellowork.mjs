@@ -4,7 +4,7 @@
 // date avec `st=date`, environ 30 cartes par page ; les dates sont relatives
 // ("il y a 3 jours"), donc approximatives.
 import { UA } from "../lib/browser.mjs";
-import { makeOffer, cleanText } from "../lib/normalize.mjs";
+import { makeOffer, cleanText, allKnown } from "../lib/normalize.mjs";
 import { parseFrenchDate } from "../lib/dates.mjs";
 
 export const id = "hellowork";
@@ -13,7 +13,7 @@ export const needsBrowser = false;
 
 const ENDPOINT = "https://www.hellowork.com/fr-fr/emploi/recherche.html";
 
-export async function scrape({ query, location, maxPages = 3, searchId, since }) {
+export async function scrape({ query, location, maxPages = 3, searchId, since, known }) {
   const offers = [];
   const seen = new Set();
 
@@ -73,6 +73,7 @@ export async function scrape({ query, location, maxPages = 3, searchId, since })
     // Tri par date décroissante : si la plus récente de la page est déjà hors
     // fenêtre, les pages suivantes le seront aussi.
     if (since && newestOnPage && newestOnPage < since) break;
+    if (allKnown(offers.slice(before), known)) break;
   }
   return offers;
 }

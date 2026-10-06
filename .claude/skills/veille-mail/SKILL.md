@@ -1,5 +1,5 @@
 ---
-name: mail
+name: veille-mail
 description: Lit la boîte Gmail pour repérer les confirmations de candidature, invitations à un entretien et refus, puis met à jour le statut des offres correspondantes dans le dashboard « Veille Emploi ». Utiliser quand l'utilisateur veut synchroniser ses candidatures avec ses mails, vérifier ses réponses ou mettre à jour ses statuts.
 ---
 
@@ -8,11 +8,11 @@ description: Lit la boîte Gmail pour repérer les confirmations de candidature,
 Argument facultatif : une durée (`30j`, `3 mois`) pour forcer la fenêtre de
 recherche.
 
-**Profil actif** : `node "${CLAUDE_PLUGIN_ROOT}/scripts/veille-config.mjs"` donne
+**Profil actif** : `node "${VEILLE_ROOT}/scripts/veille-config.mjs"` donne
 `artifactUrl` (notée URL ci-dessous) et `workspace` (noté `<W>`) ; code de sortie
-3 = aucun profil, propose `/veille:demarrer` et arrête-toi. Règles communes :
-`${CLAUDE_PLUGIN_ROOT}/docs/CONTEXTE.md`. Schéma :
-`${CLAUDE_PLUGIN_ROOT}/docs/SCHEMA.md`.
+3 = aucun profil, propose `/veille-demarrer` et arrête-toi. Règles communes :
+`${VEILLE_ROOT}/docs/CONTEXTE.md`. Schéma :
+`${VEILLE_ROOT}/docs/SCHEMA.md`.
 
 ## Règles décidées avec l'utilisateur
 
@@ -107,7 +107,7 @@ vers l'annonce elle-même, pas les liens de désinscription ni de suivi.
 ## 4. Faire correspondre
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/scripts/match-mail.mjs" --offers "<W>/.veille-tmp/mail/offers" \
+node "${VEILLE_ROOT}/scripts/match-mail.mjs" --offers "<W>/.veille-tmp/mail/offers" \
   --mails "<W>/.veille-tmp/mail/mails.json" --state "<W>/.veille-tmp/mail/state.json"
 ```
 

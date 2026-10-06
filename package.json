@@ -3,12 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Plugin Claude Code — assistant de recherche d'emploi : onboarding, scraping multi-sources à la demande, classement des offres, CV adaptés",
+  "description": "Skills Claude Code — assistant de recherche d'emploi : onboarding, scraping multi-sources à la demande, classement des offres, CV adaptés",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/benjaminwiseboy/job-scrapper.git"
+  },
   "scripts": {
     "scrape": "node scripts/scrape.mjs",
     "prepare-db": "node scripts/prepare-db.mjs",
     "setup": "node scripts/setup.mjs",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "preversion": "node scripts/release-check.mjs && node scripts/package.mjs",
+    "postversion": "git push --follow-tags"
   },
   "dependencies": {
     "playwright": "^1.47.0"

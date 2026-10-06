@@ -4,3 +4,4 @@ cv/
 details/
 .veille-tmp/
 dist/
+.veille-cache/
